@@ -1,14 +1,13 @@
 #ifndef NODE_H
 #define NODE_H
+#include <commonlib.h>
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <Eigen/Dense>
 
 using namespace std;
 
 namespace TopoENV{
-    
     class MULTINode{
         public:
             Eigen::MatrixXd data;
@@ -52,6 +51,30 @@ namespace TopoENV{
             void setShape(std::vector<int> new_shape){
                 this->shape.assign(new_shape.begin(), new_shape.end());
             }
+    };
+    struct TopoNode{
+        public:
+            TopoNode(){}
+            TopoNode(MULTINode newnode, int in){
+                //copy the value of newnode
+                this->node = newnode;
+                this->indegree = in;
+            }
+            MULTINode& getNode(){
+                //why we should put one & here
+                //We want to transfer the reference of the varibale 
+                return this->node;
+            }
+            int getDegree() const{
+                return this->indegree;
+            }
+            void setDegree(int val){
+                this->indegree = val;
+            }
+        protected:
+            //less strict than private, could be adopted by its derivatives
+            MULTINode node;
+            int indegree;
     };
 }
 

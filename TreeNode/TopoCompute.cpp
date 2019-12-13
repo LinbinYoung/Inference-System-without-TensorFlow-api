@@ -1,9 +1,5 @@
 #include <TopoCompute.h>
 
-typedef Json::Value JsonValue;
-typedef Json::Reader JsonReader;
-using JsonWriter = Json::Writer;
-
 namespace TopoENV{
 
     void ProcessBracket(string shape_str, std::vector<int> &shape_v){
@@ -40,10 +36,10 @@ namespace TopoENV{
 		    return root;
 	    }
 	    if (reader.parse(in, froot)){
-		    cout << "Total Number of Steps are" << froot.size() << endl;
+		    // cout << "Total Number of Steps are " << froot.size() << endl;
 		    for (int i = 0; i < froot.size(); i ++){
 			    string step_name = "step";
-			    step_name.append(to_string(i));
+				step_name.append(to_string(i));
 			    JsonValue sub_root = froot[step_name]; 
 			    JsonValue::Members op_name = sub_root.getMemberNames(); //for each node name
 			    for (auto iter = op_name.begin(); iter != op_name.end(); iter ++){
@@ -51,7 +47,7 @@ namespace TopoENV{
 				    string new_node_name = step_name;
 				    new_node_name.append(colon);
 				    new_node_name.append(*iter);
-				    cout << new_node_name << endl;
+				    // cout << new_node_name << endl;
 				    /*
 					    INPUT
 					    OPERATION
@@ -100,6 +96,55 @@ namespace TopoENV{
 	    return root;
     }
 
+	void ComputeAll(map<string, TopoENV::TopoNode> &indgree, MULTINode &tnode){
+        std::map<string, int> namemap;
+        namemap.insert(make_pair("Add", 1));
+        namemap.insert(make_pair("MatMul", 2));
+        namemap.insert(make_pair("Softmax", 3));
+        Eigen::MatrixXd input_1;
+        Eigen::MatrixXd input_2;
+        Eigen::MatrixXd output;
+        std::vector<int> new_shape;
+        Eigen::VectorXi final_res;
+        switch(namemap[tnode.op]){
+            case 1:
+                input_1 = indgree[tnode.children[0]].getNode().data;
+                input_2 = indgree[tnode.children[1]].getNode().data;
+                if (input_1.cols() != input_2.cols() || input_1.rows() != input_2.rows()){
+                    output = AddBroadCast(input_1, input_2, true);
+                }else{
+                    output = AddBroadCast(input_1, input_2, false);
+                }
+                new_shape.push_back(output.rows());
+                new_shape.push_back(output.cols());
+                tnode.setData(output);
+                tnode.setShape(new_shape);
+                break;
+            case 2:
+                input_1 = indgree[tnode.children[0]].getNode().data;
+                input_2 = indgree[tnode.children[1]].getNode().data;
+                output = input_1*input_2;
+                new_shape.push_back(output.rows());
+                new_shape.push_back(output.cols());
+                tnode.setData(output);
+                tnode.setShape(new_shape);
+                break;
+            case 3:
+                input_1 = indgree[tnode.children[0]].getNode().data;
+                output = SoftmaxOp(input_1, true);
+                new_shape.push_back(output.rows());
+                new_shape.push_back(output.cols());
+                tnode.setData(output);
+                tnode.setShape(new_shape);
+                final_res = ArgmaxOp(output, true);
+                cout << "Final Result:" << endl;
+                cout << final_res << endl;
+                break;
+            default:
+                cout << "Invalid Operation!!!" << endl;
+        }
+    }
+
     void TopoComputeEngine(map<string, TopoNode> indgree, Eigen::MatrixXd const input){
         //copy value
         std::deque<string> q;
@@ -132,29 +177,8 @@ namespace TopoENV{
                     //  cout << indgree[nodename].getNode().data << endl;
                  }else if(op_name == "Identity"){
                     //  cout << tnode.data << endl;
-                 }else if(op_name == "MatMul"){
-                     Eigen::MatrixXd input_1 = indgree[tnode.children[0]].getNode().data;
-                     Eigen::MatrixXd input_2 = indgree[tnode.children[1]].getNode().data;
-                     cout << input_1.rows() << " : " << input_1.cols() << endl;
-                     cout << input_2.rows() << " : " << input_2.cols() << endl;
-                     Eigen::MatrixXd output = input_1*input_2;
-                     std::vector<int> new_shape;
-                     new_shape.push_back(output.rows());
-                     new_shape.push_back(output.cols());
-                     tnode.setData(output);
-                     tnode.setShape(new_shape);
-                 }else if (op_name == "Add"){
-                     Eigen::MatrixXd input_1 = indgree[tnode.children[0]].getNode().data;
-                     Eigen::MatrixXd input_2 = indgree[tnode.children[1]].getNode().data;
-                     cout << input_1.rows() << " : " << input_1.cols() << endl;
-                     cout << input_2.rows() << " : " << input_2.cols() << endl;
-                     Eigen::MatrixXd output = oplib::AddBroadCast(input_1, input_2, true);
-                     cout << output << endl;
-                     std::vector<int> new_shape;
-                     new_shape.push_back(output.rows());
-                     new_shape.push_back(output.cols());
-                     tnode.setData(output);
-                     tnode.setShape(new_shape);
+                 }else{
+                     ComputeAll(indgree, tnode);
                  }
                  size_of_q --;
              }//end inner while

@@ -5,7 +5,6 @@
 
 using namespace std;
 using namespace TopoENV;
-
 /*
 JSONCPP library
 
@@ -23,7 +22,7 @@ enum ValueType {
 */
 
 int main(void){
-  string path = "../jsonfile/test.json";
+  string path = "/home/ubuntu/Desktop/TOPOLOGYGOGOGO/test.json";
   std::map<string, TopoENV::TopoNode> indgree;
   TopoENV::ConstructTree(path, indgree);
   Eigen::MatrixXd m = MatrixXd::Random(32,784);
