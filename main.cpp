@@ -1,12 +1,13 @@
 #include <iostream>
 #include <map>
+#include <common/commonlib.h>
 #include <TreeNode/Node.h>
 #include <TreeNode/TopoCompute.h>
 
 using namespace std;
 using namespace TopoENV;
+
 /*
-JSONCPP library
 
 enum ValueType {
   nullValue = 0, ///< 'null' value
@@ -22,10 +23,12 @@ enum ValueType {
 */
 
 int main(void){
-  string path = "/home/ubuntu/Desktop/TOPOLOGYGOGOGO/test.json";
-  std::map<string, TopoENV::TopoNode> indgree;
-  TopoENV::ConstructTree(path, indgree);
+  string path = "../jsonfile/test.json";
+  std::map<string, TopoENV::TopoNode<double>> indgree;
+  TopoENV::ConstructTree<double>(path, indgree);
   Eigen::MatrixXd m = MatrixXd::Random(32,784);
-  TopoENV::TopoComputeEngine(indgree, m);
+  Eigen_2D<double> input;
+  input.setData(m);
+  TopoENV::TopoComputeEngine<double>(indgree, input);
 	return 0;
 }

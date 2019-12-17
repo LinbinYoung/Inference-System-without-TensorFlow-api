@@ -1,6 +1,7 @@
 #ifndef DATATYPE_H
 #define DATATYPE_H
 #include <commonlib.h>
+#include <limits>
 
 namespace MultiEigen{
 
@@ -14,14 +15,20 @@ namespace MultiEigen{
                     this->data(i) = (T)node[i].asDouble();
                 }
             }
-            Eigen::Matrix<T, Eigen::Dynamic, 1, Eigen::RowMajor>& getData(){
+            Eigen::Matrix<T, Eigen::Dynamic, 1>& getData(){
                 return this->data;
             }
-            void setData(Eigen::Matrix<T, Eigen::Dynamic, 1, Eigen::RowMajor>& current){
+            void setData(Eigen::Matrix<T, Eigen::Dynamic, 1> current){
                 this->data = current;
             }
+            void Printout(){
+                for (int i = 0; i < this->data.size(); i ++){
+                    cout << this->data[i] << " ";
+                }
+                cout << endl;
+            }
         private:
-            Eigen::Matrix<T, Eigen::Dynamic, 1, Eigen::RowMajor> data;
+            Eigen::Matrix<T, Eigen::Dynamic, 1> data;
     };
     /*
         padding: VALID = without padding, SAME = with zero padding
@@ -31,7 +38,7 @@ namespace MultiEigen{
     enum struct padding_type{
         valid,
         same
-    }
+    };
     #define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
     #define NEEDED_DIMENSION(input, filter, stride) ((((input/stride))-1) * (stride) + filter - input)
     template <typename T>
@@ -52,10 +59,10 @@ namespace MultiEigen{
             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& getData(){
                 return this->data;
             }
-            void setData(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& current){
+            void setData(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> current){
                 this->data = current;
             }
-            void setData(Eigen_2D &current){
+            void setData(Eigen_2D<T> &current){
                 this->data = current.data;
             }
             size_t get_col_length(){
@@ -65,25 +72,35 @@ namespace MultiEigen{
                 return this->data.rows();
             }
             //add with broadcast
-            void AddBoradCast(Eigen_Vector vec){
-                assert(this->data.cols() == vec.rows());
+            Eigen_2D<T> AddBoradCast(Eigen_2D<T> new_vec){
+                Eigen_2D<T> res;
+                Eigen::Matrix<T, Eigen::Dynamic, 1> vec(new_vec.get_row_length());
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& vec_infere = new_vec.getData();
+                for(int i = 0; i < new_vec.get_row_length(); i ++){
+                    vec(i) = vec_infere(i,0);
+                }
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data.transpose();
                 output.colwise() += vec;
-                this->setData(output.transpose());
+                res.setData(output.transpose());
+                return res;
             }
             //add without broadcast
-            void AddWithoutBroadCast(Eigen_2D mat2){
+            Eigen_2D<T> AddWithoutBroadCast(Eigen_2D<T> mat2){
+                Eigen_2D<T> res;
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data + mat2.getData();
-                this->setData(output);
+                res.setData(output);
+                return res;
             }
             //matmul
-            void Matmul(Eigen_2D mat2){
+            Eigen_2D<T> Matmul(Eigen_2D<T> mat2){
+                Eigen_2D<T> res;
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data * mat2.data;
-                this->setData(output);
+                res.setData(output);
+                return res;
             }
             //argmax
-            Eigen_Vector Argmax(bool row_or_col){
-                Eigen_Vector res;
+            Eigen_Vector<T> Argmax(bool row_or_col){
+                Eigen_Vector<T> res;
                 res.setData(this->Argmax_helper(this->data, row_or_col));
                 return res;
             }
@@ -96,8 +113,8 @@ namespace MultiEigen{
                 int up = 0;
                 int down = 0;
                 if (padding == padding_type::same){
-                    int x_needed = NEEDED_DIMENSION(image.get_col_length(), kernel.get_col_length(), x_axis_stride);
-                    int y_needed = NEEDED_DIMENSION(image.get_row_length(), kernel.get_row_length(), y_axis_stride);
+                    int x_needed = NEEDED_DIMENSION(this->get_col_length(), kernel.get_col_length(), x_axis_stride);
+                    int y_needed = NEEDED_DIMENSION(this->get_row_length(), kernel.get_row_length(), y_axis_stride);
                     left = x_needed / 2;
                     right = x_needed - left;
                     up = y_needed / 2;
@@ -112,31 +129,37 @@ namespace MultiEigen{
                 //expand the image with possible padding
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> new_image;
                 new_image.resize(row_shape, col_shape);
-                new_image.block(up, left, this->data.rows(), this->data.cols()) << this->data;
+                new_image.block(up, left, this->get_row_length(), this->get_col_length()) << this->data;
                 //left padding
                 new_image.block(0, 0, row_shape, left) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, left);
                 //right paddding
-                new_image.block(0, left+image_mat.cols(), row_shape, right) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, right);
+                new_image.block(0, left+this->get_col_length(), row_shape, right) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, right);
                 //up padding
                 new_image.block(0, 0, up, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(up, col_shape);
                 //down padding
-                new_image.block(up+image_mat.rows(), 0, down, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(down, col_shape);
+                new_image.block(up+this->get_row_length(), 0, down, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(down, col_shape);
                 //now start compute the convd_base
                 res.data.resize(ac_row_shape, ac_col_shape);
                 for (int i = 0; i < ac_row_shape; i ++){
-                    for (int j = 0; j < ac_col_shape, j ++){
+                    for (int j = 0; j < ac_col_shape; j ++){
                         res.data(i, j) = new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).dot(kernel);
                     }
                 }
                 return res;
             }
-        private:
-            Eigen::Matrix<T, Eigen::Dynamic, 1, Eigen::RowMajor> Argmax_helper(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> mat1, bool row_or_col){
+            //softmax2d
+            Eigen_2D<T> softmax2d(bool row_or_col){
+                Eigen_2D<T> res;
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> softres = this->SoftmaxOp(this->data, row_or_col);
+                res.setData(softres);
+                return res;
+            }
+        protected:
+            Eigen::Matrix<T, Eigen::Dynamic, 1> Argmax_helper(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> mat1, bool row_or_col){
                 if (!row_or_col){
-                    return ArgmaxOp(mat1.transpose(), !row_or_col);
+                    return Argmax_helper(mat1.transpose(), !row_or_col);
                 }
-                Eigen::Matrix<T, Eigen::Dynamic, 1, Eigen::RowMajor> output;
-                output.resize(mat1.rows());
+                Eigen::Matrix<T, Eigen::Dynamic, 1> output(mat1.rows());
                 for (int i = 0; i < mat1.rows(); i ++){
                     output(i) = (T)this->FindMaxIndex(mat1, i, mat1.cols());
                 }
@@ -185,7 +208,6 @@ namespace MultiEigen{
                 }
                 return mat1;
             }
-        protected:
             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data;
     };
     template <typename T>
@@ -206,7 +228,7 @@ namespace MultiEigen{
                 }//end for
             }
             void setData (std::vector<Eigen_2D<T>>& Tdata){
-                this->Tdata.assign(Tdata.begin(), T_data.end());
+                this->Tdata.assign(Tdata.begin(), Tdata.end());
             }
             vector<Eigen_2D<T>>& getData(){
                 return this->Tdata;
@@ -268,7 +290,7 @@ namespace MultiEigen{
                 Note that we reshape a 4-dimension to prepare for the future fully connected layer connection
             */
             Eigen_3D<T> reshape(Eigen_4D<T> image_set){
-                Eigen_3D res;
+                Eigen_3D<T> res;
                 res.Tdata.resize(image_set.Qdata.size());
                 for (int i = 0; i < image_set.Qdata.size(); i ++){
                     res.Tdata[i] = image_set[i].flatToVec();
@@ -278,8 +300,6 @@ namespace MultiEigen{
         private:
             std::vector<Eigen_3D<T>> Qdata;
     };
-    //two 4d matrixs, one matrix reprents input of which the first dimension is the number of pics, it will keep the same during all computations
-    //the second matrix is kernel, the last dimension denotes the number of filter.
 }
 
 #endif

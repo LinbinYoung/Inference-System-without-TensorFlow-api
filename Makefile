@@ -1,4 +1,4 @@
-SRCS = main.cpp ./TreeNode/TopoCompute.cpp ./TreeNode/tensor_math_lib.cpp
+SRCS = main.cpp
 
 TARGET = output
 
