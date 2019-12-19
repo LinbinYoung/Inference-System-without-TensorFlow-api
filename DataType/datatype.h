@@ -46,13 +46,17 @@ namespace MultiEigen{
             bool isValid(){
                 return this->cur_index < this->max_size;
             }
-            void operator++(int){
+            Eigen_Col_iterator<T>& operator++(int){
+                Eigen_Col_iterator<T> temp = *this;
                 this->cur_index = this->cur_index + this->step;
                 this->start = this->start + this->step;
+                return temp;
             }
-            void operator--(int){
+            Eigen_Col_iterator<T>& operator--(int){
+                Eigen_Col_iterator<T> temp = *this;
                 this->cur_index = this->cur_index - this->step;
                 this->start = this->start - this->step;
+                return temp;
             }
             T &operator*(){
                 return *(this->start);
@@ -90,13 +94,17 @@ namespace MultiEigen{
             bool isValid(){
                 return this->cur_index < this->max_size;
             }
-            void operator++(int){
+            Eigen_2D_iterator<T>& operator++(int){
+                Eigen_2D_iterator<T> temp = *this;
                 this->cur_index = this->cur_index + this->step;
                 this->data = this->data + this->step;
+                return temp;
             }
-            void operator--(int){
+            Eigen_2D_iterator<T>& operator--(int){
+                Eigen_2D_iterator<T> temp = *this;
                 this->cur_index = this->cur_index - this->step;
                 this->data = this->data - this->step;
+                return temp;
             }
             Eigen_Col_iterator<T> &operator*(){
                 return this->start.initailizer(this->data, 0, this->step, 1);
@@ -126,6 +134,7 @@ namespace MultiEigen{
         Note that in TensorFlow, "SAME" tries to pad evenly left and right, but if the amount of columns to be added is odd,
         it will add the extra column to the right, the same logic applies vertically: there may be an extra row of zeros at the bottom.
     */
+
     enum struct padding_type{
         valid,
         same
@@ -258,9 +267,12 @@ namespace MultiEigen{
             Eigen_2D<T> apply(const std::function<T(const T&)> &f){
                 Eigen_2D res;
                 res.setData(this->data);
-                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
-                for (auto row : f_data.rowwise()){
-                    std::transform(row.begin(), row.end(), row.begin(), f);
+                // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
+                for (auto iter = res.begin(); iter != res.end(); iter++){
+                    //std::transform(iter.begin(), iter.end(), iter.begin(), f);
+                    for (auto elem = iter.begin(); elem != iter.end(); elem ++){
+                        *elem = f(*elem);
+                    }
                 }
                 return res;
             }

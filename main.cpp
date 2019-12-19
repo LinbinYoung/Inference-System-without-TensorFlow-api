@@ -33,11 +33,11 @@ int main(void){
   for (auto iter = input.begin(); iter != input.end(); iter++){
      for (auto inner_iter = iter.begin(); inner_iter != iter.end(); inner_iter++){
        cout << *inner_iter << " ";
-       *inner_iter = 1;
      }
      cout << endl;
   }
-  cout << input.getData() << endl;
-  // TopoENV::TopoComputeEngine<double>(indgree, input);
+  Eigen_2D<double> output = input.apply(MATHLIB::sigmoid<double>);
+  cout << output.getData() << endl;
+  //TopoENV::TopoComputeEngine<double>(indgree, input);
 	return 0;
 }
