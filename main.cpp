@@ -23,12 +23,21 @@ enum ValueType {
 */
 
 int main(void){
-  string path = "../jsonfile/test.json";
+  string path = "../jsonfile/model2.json";
   std::map<string, TopoENV::TopoNode<double>> indgree;
   TopoENV::ConstructTree<double>(path, indgree);
-  Eigen::MatrixXd m = MatrixXd::Random(32,784);
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> m =  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Random(3,3);
   Eigen_2D<double> input;
   input.setData(m);
-  TopoENV::TopoComputeEngine<double>(indgree, input);
+  // iter ++;
+  for (auto iter = input.begin(); iter != input.end(); iter++){
+     for (auto inner_iter = iter.begin(); inner_iter != iter.end(); inner_iter++){
+       cout << *inner_iter << " ";
+       *inner_iter = 1;
+     }
+     cout << endl;
+  }
+  cout << input.getData() << endl;
+  // TopoENV::TopoComputeEngine<double>(indgree, input);
 	return 0;
 }

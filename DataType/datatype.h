@@ -30,6 +30,97 @@ namespace MultiEigen{
         private:
             Eigen::Matrix<T, Eigen::Dynamic, 1> data;
     };
+
+    template <typename T>
+    class Eigen_Col_iterator{
+        public:
+            Eigen_Col_iterator(){}
+            Eigen_Col_iterator<T>& initailizer(T *data, size_t index, size_t size, size_t step){
+                this->start = data;
+                this->cur_index = index;
+                this->max_size = size;
+                this->step = step;
+                this->start = this->start + index;
+                return *this;
+            }
+            bool isValid(){
+                return this->cur_index < this->max_size;
+            }
+            void operator++(int){
+                this->cur_index = this->cur_index + this->step;
+                this->start = this->start + this->step;
+            }
+            void operator--(int){
+                this->cur_index = this->cur_index - this->step;
+                this->start = this->start - this->step;
+            }
+            T &operator*(){
+                return *(this->start);
+            }
+            bool operator==(const Eigen_Col_iterator<T>& iter2){
+                return this->start == iter2.start;
+            }
+            bool operator!=(const Eigen_Col_iterator<T>& iter2){
+                return this->start != iter2.start;
+            }
+        public:
+            T *start;
+        private:
+            size_t step;
+            size_t cur_index;
+            size_t max_size;
+    };
+
+    template <typename T>
+    class Eigen_2D_iterator{
+        public:
+            Eigen_2D_iterator(){}
+            Eigen_2D_iterator(T* data, size_t index, size_t col, size_t row){
+                this->max_size = col * row;
+                this->step = col;
+                this->cur_index = index;
+                this->data = data;
+                this->data = this->data + index;
+            }
+            /*
+                0 1 2
+                3 4 5
+                6 7 8
+            */
+            bool isValid(){
+                return this->cur_index < this->max_size;
+            }
+            void operator++(int){
+                this->cur_index = this->cur_index + this->step;
+                this->data = this->data + this->step;
+            }
+            void operator--(int){
+                this->cur_index = this->cur_index - this->step;
+                this->data = this->data - this->step;
+            }
+            Eigen_Col_iterator<T> &operator*(){
+                return this->start.initailizer(this->data, 0, this->step, 1);
+            }
+            bool operator==(const Eigen_2D_iterator<T>& iter2){
+                return this->data == iter2.data;
+            }
+            bool operator!=(const Eigen_2D_iterator<T>& iter2){
+                return this->data != iter2.data;
+            }
+            Eigen_Col_iterator<T> begin(){
+                return this->start.initailizer(this->data, 0, this->step, 1);
+            }
+            Eigen_Col_iterator<T> end(){
+                return this->start.initailizer(this->data, this->step, this->step, 1);
+            }
+            T* data;
+            Eigen_Col_iterator<T> start;
+        private:
+            size_t cur_index;
+            size_t step;
+            size_t max_size;
+    };
+
     /*
         padding: VALID = without padding, SAME = with zero padding
         Note that in TensorFlow, "SAME" tries to pad evenly left and right, but if the amount of columns to be added is odd,
@@ -71,6 +162,15 @@ namespace MultiEigen{
             size_t get_row_length(){
                 return this->data.rows();
             }
+            Eigen_2D_iterator<T> begin(){
+                Eigen_2D_iterator<T> b(&this->data(0,0), 0, this->get_col_length(), this->get_row_length());
+                return b;
+            }
+            Eigen_2D_iterator<T> end(){
+                Eigen_2D_iterator<T> b(&this->data(0,0), this->get_col_length()*this->get_row_length(), this->get_col_length(), this->get_row_length());
+                return b;
+            }
+        public:
             //add with broadcast
             Eigen_2D<T> AddBoradCast(Eigen_2D<T> new_vec){
                 Eigen_2D<T> res;
@@ -154,6 +254,16 @@ namespace MultiEigen{
                 res.setData(softres);
                 return res;
             }
+            //apply(Relu, Sigmoid ......)
+            Eigen_2D<T> apply(const std::function<T(const T&)> &f){
+                Eigen_2D res;
+                res.setData(this->data);
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
+                for (auto row : f_data.rowwise()){
+                    std::transform(row.begin(), row.end(), row.begin(), f);
+                }
+                return res;
+            }
         protected:
             Eigen::Matrix<T, Eigen::Dynamic, 1> Argmax_helper(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> mat1, bool row_or_col){
                 if (!row_or_col){
@@ -210,6 +320,7 @@ namespace MultiEigen{
             }
             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data;
     };
+
     template <typename T>
     struct Eigen_3D{
         //represent one picture or kernel
@@ -268,6 +379,9 @@ namespace MultiEigen{
                     this->Qdata.push_back(temp);
                 }//end for
             }
+            std::vector<Eigen_3D<T>>& getData(){
+                return this->Qdata;
+            }
             Eigen_4D<T> convd_with_multi_filter(Eigen_4D<T> image, Eigen_4D<T> kernel, std::vector<int> stride, padding_type padding){
                 Eigen_4D<T> res;
                 res.Qdata.resize(image.Qdata.size());
@@ -289,11 +403,12 @@ namespace MultiEigen{
                 -d : number of channels
                 Note that we reshape a 4-dimension to prepare for the future fully connected layer connection
             */
-            Eigen_3D<T> reshape(Eigen_4D<T> image_set){
-                Eigen_3D<T> res;
-                res.Tdata.resize(image_set.Qdata.size());
-                for (int i = 0; i < image_set.Qdata.size(); i ++){
-                    res.Tdata[i] = image_set[i].flatToVec();
+            Eigen_2D<T> reshape(){
+                Eigen_2D<T> res;
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& res_data = res.getData();
+                res_data.resize(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length());
+                for (int i = 0; i < res_data.rows(); i ++){
+                    //leave here
                 }
                 return res;
             }

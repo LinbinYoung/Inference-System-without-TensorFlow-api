@@ -4,8 +4,11 @@
 #include <map>
 #include <commonlib.h>
 #include <DataType/datatype.h>
+#include <TreeNode/activator.h>
 #include <Node.h>
 #include <cstdarg>
+
+using namespace MATHLIB;
 
 namespace TopoENV{
     void ProcessBracket(string shape_str, std::vector<int> &shape_v){
@@ -86,10 +89,10 @@ namespace TopoENV{
 				    string op = node["OPERATION"].asCString();
 				    string type = node["TYPE"].asCString();
                     string father_name = node["FATHER"].isNull()? "None" : node["FATHER"].asCString();
-				    MULTINode<T> newnode(Temp_data, father_name, shape, new_node_name, op, INPUT);
+				    MULTINode<T> newnode(Temp_data, father_name, shape, *iter, op, INPUT);
                     TopoNode<T> topo_node(newnode, INPUT.size());
 				    root.reset(newnode);
-				    map_s_n.insert(make_pair(new_node_name, topo_node));
+				    map_s_n.insert(make_pair(*iter, topo_node));
 			    }
 		    }//end for
 	    }
@@ -102,8 +105,12 @@ namespace TopoENV{
         namemap.insert(make_pair("Add", 1));
         namemap.insert(make_pair("MatMul", 2));
         namemap.insert(make_pair("Softmax", 3));
+        namemap.insert(make_pair("Reshape", 4));
+        namemap.insert(make_pair("Sigmoid", 5));
+        namemap.insert(make_pair("Relu", 6));
         Eigen_2D<T> input_1;
         Eigen_2D<T> input_2;
+        Eigen_4D<T> image_input;
         Eigen_2D<T> output;
         std::vector<int> new_shape;
         Eigen_Vector<T> final_res;
@@ -141,6 +148,31 @@ namespace TopoENV{
                 cout << "Final Result:" << endl;
                 final_res.Printout();
                 break;
+            case 4:
+                /*
+                [a, b, c, d]
+                -a: Number of pictures 
+                -b: x dimension
+                -c: y dimension
+                -d: Number of channels
+                */
+                break;
+            case 5:
+                input_1 = indgree[tnode.children[0]].getNode().data;
+                output = input_1.apply(MATHLIB::sigmoid<T>);
+                new_shape.push_back(output.get_row_length());
+                new_shape.push_back(output.get_col_length());
+                tnode.setData(output);
+                tnode.setShape(new_shape);
+                break;
+            case 6:
+                input_1 = indgree[tnode.children[0]].getNode().data;
+                output = input_1.apply(MATHLIB::relu<T>);
+                new_shape.push_back(output.get_row_length());
+                new_shape.push_back(output.get_col_length());
+                tnode.setData(output);
+                tnode.setShape(new_shape);
+                break;
             default:
                 cout << "Invalid Operation!!!" << endl;
         }
@@ -151,10 +183,10 @@ namespace TopoENV{
         std::deque<string> q;
         //initialzied the queue with node of which the indegree in 0
         for (auto iter = indgree.begin(); iter != indgree.end(); iter ++){
-           if (iter->second.getDegree() == 0){
-               //store the value of iter
-               q.push_back(iter->first);
-           }
+            if (iter->second.getDegree() == 0){
+                //store the value of iter
+                q.push_back(iter->first);
+            }
         }//end for
         while(q.size() > 0){
              int size_of_q = q.size();
