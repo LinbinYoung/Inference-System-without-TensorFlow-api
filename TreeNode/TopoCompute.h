@@ -116,6 +116,7 @@ namespace TopoENV{
         Eigen_Vector<T> final_res;
         switch(namemap[tnode.op]){
             case 1:
+                cout << "1" << endl;
                 input_1 = indgree[tnode.children[0]].getNode().data;
                 input_2 = indgree[tnode.children[1]].getNode().data;
                 if (input_1.get_col_length() != input_2.get_col_length() || input_1.get_row_length() != input_2.get_row_length()){
@@ -127,17 +128,23 @@ namespace TopoENV{
                 new_shape.push_back(output.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
+                cout << "1 finished" << endl;
                 break;
             case 2:
+                cout << "2" << endl;
                 input_1 = indgree[tnode.children[0]].getNode().data;
+                cout << input_1.get_col_length() << "=====" << input_1.get_row_length() << endl;
                 input_2 = indgree[tnode.children[1]].getNode().data;
+                cout << input_2.get_col_length() << "=====" << input_2.get_row_length() << endl;
                 output = input_1.Matmul(input_2);
                 new_shape.push_back(output.get_row_length());
                 new_shape.push_back(output.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
+                cout << "2 finished" << endl;
                 break;
             case 3:
+                cout << "3" << endl;
                 input_1 = indgree[tnode.children[0]].getNode().data;
                 output = input_1.softmax2d(true);
                 new_shape.push_back(output.get_row_length());
@@ -147,6 +154,7 @@ namespace TopoENV{
                 final_res = output.Argmax(true);
                 cout << "Final Result:" << endl;
                 final_res.Printout();
+                cout << "3 finished" << endl;
                 break;
             case 4:
                 /*
@@ -158,20 +166,24 @@ namespace TopoENV{
                 */
                 break;
             case 5:
+                cout << "5" << endl;
                 input_1 = indgree[tnode.children[0]].getNode().data;
                 output = input_1.apply(MATHLIB::sigmoid<T>);
                 new_shape.push_back(output.get_row_length());
                 new_shape.push_back(output.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
+                cout << "5 finished" << endl;
                 break;
             case 6:
+                cout << "6" << endl;
                 input_1 = indgree[tnode.children[0]].getNode().data;
                 output = input_1.apply(MATHLIB::relu<T>);
                 new_shape.push_back(output.get_row_length());
                 new_shape.push_back(output.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
+                cout << "6 finished" << endl;
                 break;
             default:
                 cout << "Invalid Operation!!!" << endl;

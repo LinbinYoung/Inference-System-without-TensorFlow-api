@@ -415,12 +415,22 @@ namespace MultiEigen{
                 -d : number of channels
                 Note that we reshape a 4-dimension to prepare for the future fully connected layer connection
             */
+            #define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
+            #define CALCULATE_INDEX(num_of_channels, col_size, i, j) (num_of_channels + col_size*num_of_channels*i + num_of_channels*j)
             Eigen_2D<T> reshape(){
-                Eigen_2D<T> res;
-                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& res_data = res.getData();
-                res_data.resize(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length());
-                for (int i = 0; i < res_data.rows(); i ++){
-                    //leave here
+                assert(this->Qdata.size() > 0); //To ensure the correctness of the following code
+                Eigen_2D<T> res(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length());
+                for (int m = 0; m < this->Qdata.size(); m ++){
+                    // Efficient loop through 3D map
+                    size_t num_of_c = this->Qdata[m].size();
+                    for (int n_c = 0; n_c < num_of_c; n_c ++){
+                        Eigen_2D<T> image_map = this->Qdata[m][n_c];
+                        for (int i = 0; i < image_map.get_row_length(); i++){
+                            for (int j = 0; j < image_map.get_col_length(); j ++){
+                                res(m, CALCULATE_INDEX(num_of_c, image_map.get_col_length(), i, j)) = image_map.getData()(i,j);
+                            }
+                        }//loop through the image
+                    }
                 }
                 return res;
             }
