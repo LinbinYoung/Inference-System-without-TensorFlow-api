@@ -146,7 +146,7 @@ namespace MultiEigen{
         public:
             Eigen_2D(){}
             Eigen_2D(int m, int n){
-                this->data.resize(m, n);
+                this->data =  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Random(m,n);
             }
             Eigen_2D(int m, int n, Json::Value node){
                 this->data.resize(m, n);
@@ -339,7 +339,6 @@ namespace MultiEigen{
         public:
             Eigen_3D(){}
             Eigen_3D(int a, int b, int c, Json::Value node){
-                Tdata.resize(c);
                 for (int i = 0; i < c ; i ++){
                     Eigen_2D<T> temp(b, c);
                     for (int m = 0; m < a; m ++){
@@ -349,6 +348,12 @@ namespace MultiEigen{
                     }
                     this->Tdata.push_back(temp);
                 }//end for
+            }
+            Eigen_3D(int a, int b, int c){
+                for (int i = 0; i < c; i ++){
+                    Eigen_2D<T> temp(a, b);
+                    this->Tdata.push_back(temp);
+                }
             }
             void setData (std::vector<Eigen_2D<T>>& Tdata){
                 this->Tdata.assign(Tdata.begin(), Tdata.end());
@@ -379,29 +384,57 @@ namespace MultiEigen{
         private:
             std::vector<Eigen_2D<T>> Tdata;
     };
+
+    enum struct matrix_type{
+        kernel,
+        image
+    };
+
     template <typename T>
     struct Eigen_4D
     {
         public:
             Eigen_4D(){}
-            Eigen_4D(int a, int b, int c, int d, Json::Value node){
-                this->Qdata.resize(a);
-                for (int i = 0; i < a; i ++){
-                    Eigen_3D<T> temp(a, b, c, node[i]);
+            Eigen_4D(int a, int b, int c, int d, Json::Value node, matrix_type mtype){
+                this->mtype = mtype;
+                if (this->mtype == matrix_type::image){
+                    for (int i = 0; i < a; i ++){
+                        Eigen_3D<T> temp(b, c, d, node[i]);
+                        this->Qdata.push_back(temp);
+                    }//end for
+                }else{
+                    for (int i = 0; i < d; i ++){
+                        Eigen_3D<T> temp_3d;
+                        for (int m = 0; m < a; m ++){
+                            Eigen_2D<T> temp_2d;
+                            for (int n = 0; n < b; n ++){
+                                for (int j = 0; j < c; j ++){
+                                    temp_2d.getData()(n, j) = (T)node[m][n][j][i].asDouble();
+                                }
+                            }
+                            temp_3d.getData().push_back(temp_2d);
+                        }
+                    }
+                }
+            }
+            Eigen_4D(int a, int b, int c, int d){
+                for (int i = 0; i < a; i++){
+                    Eigen_3D<T> temp(b, c, d);
                     this->Qdata.push_back(temp);
-                }//end for
+                }
             }
             std::vector<Eigen_3D<T>>& getData(){
                 return this->Qdata;
             }
-            Eigen_4D<T> convd_with_multi_filter(Eigen_4D<T> image, Eigen_4D<T> kernel, std::vector<int> stride, padding_type padding){
+            Eigen_4D<T> convd_with_multi_filter(Eigen_4D<T> kernel, std::vector<int> stride, padding_type padding){
+                assert(this->mtype == matrix_type::image); // to ensure the validity of this function
                 Eigen_4D<T> res;
-                res.Qdata.resize(image.Qdata.size());
-                for (int i = 0; i < image.Qdata.size(); i ++){
+                res.Qdata.resize(this->Qdata.size());
+                for (int i = 0; i < this->Qdata.size(); i ++){
                     Eigen_3D<T> unit_res;
                     unit_res.Tdata.resize(kernel.Qdata.size());
                     for (int j = 0; j < kernel.Qdata.size(); j ++){
-                        unit_res.Tdata[j] = image.Qdata[i].convd(kernel.Qdata[j], stride, padding);
+                        unit_res.Tdata[j] = this->Qdata[i].convd(kernel.Qdata[j], stride, padding);
                     }//end for
                     res[i] = unit_res;
                 }
@@ -412,22 +445,23 @@ namespace MultiEigen{
                 -a : number of pictures
                 -b : dimension x
                 -c : dimension y
-                -d : number of channels
+                -d : number of channelsT
                 Note that we reshape a 4-dimension to prepare for the future fully connected layer connection
             */
-            #define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
-            #define CALCULATE_INDEX(num_of_channels, col_size, i, j) (num_of_channels + col_size*num_of_channels*i + num_of_channels*j)
+            #define CALCULATE_INDEX(channel_index, num_of_c, col_size, i, j) (channel_index + col_size*num_of_c*i + num_of_c*j)
             Eigen_2D<T> reshape(){
                 assert(this->Qdata.size() > 0); //To ensure the correctness of the following code
-                Eigen_2D<T> res(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length());
+                Eigen_2D<T> res(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length()*this->Qdata[0].getData().size());
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& res_data = res.getData();
+                size_t num_of_c = this->Qdata[0].getData().size();
                 for (int m = 0; m < this->Qdata.size(); m ++){
                     // Efficient loop through 3D map
-                    size_t num_of_c = this->Qdata[m].size();
                     for (int n_c = 0; n_c < num_of_c; n_c ++){
-                        Eigen_2D<T> image_map = this->Qdata[m][n_c];
+                        //fetch one specific channel
+                        Eigen_2D<T> image_map = this->Qdata[m].getData()[n_c];
                         for (int i = 0; i < image_map.get_row_length(); i++){
                             for (int j = 0; j < image_map.get_col_length(); j ++){
-                                res(m, CALCULATE_INDEX(num_of_c, image_map.get_col_length(), i, j)) = image_map.getData()(i,j);
+                                res_data(m, CALCULATE_INDEX(n_c, num_of_c,image_map.get_col_length(), i, j)) = image_map.getData()(i,j);
                             }
                         }//loop through the image
                     }
@@ -436,6 +470,7 @@ namespace MultiEigen{
             }
         private:
             std::vector<Eigen_3D<T>> Qdata;
+            matrix_type mtype = matrix_type::image;
     };
 }
 
