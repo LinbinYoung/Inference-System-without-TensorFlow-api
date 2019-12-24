@@ -21,6 +21,12 @@ namespace MultiEigen{
             void setData(Eigen::Matrix<T, Eigen::Dynamic, 1> current){
                 this->data = current;
             }
+            void setData(int m, Json::Value node){
+                this->data.resize(m);
+                for (int i = 0; i < m; i ++){
+                    this->data(i) = (T)node[i].asDouble();
+                }
+            }
             void Printout(){
                 for (int i = 0; i < this->data.size(); i ++){
                     cout << this->data[i] << " ";
@@ -156,6 +162,9 @@ namespace MultiEigen{
                     }
                 }
             }
+            void initialize(int m, int n){
+                this->data =  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Random(m,n);
+            }
             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& getData(){
                 return this->data;
             }
@@ -164,6 +173,14 @@ namespace MultiEigen{
             }
             void setData(Eigen_2D<T> &current){
                 this->data = current.data;
+            }
+            void setData(int m, int n, Json::Value node){
+                this->data.resize(m, n);
+                for (int i = 0; i < m; i ++){
+                    for (int j = 0; j < n; j ++){
+                        this->data(i, j) = (T)node[i][j].asDouble();
+                    }
+                }
             }
             size_t get_col_length(){
                 return this->data.cols();
@@ -343,7 +360,7 @@ namespace MultiEigen{
                     Eigen_2D<T> temp(b, c);
                     for (int m = 0; m < a; m ++){
                         for (int n = 0; n < b; n ++){
-                            temp.data(m, n) = (T)node[m][n][i].asDouble();
+                            temp.getData()(m, n) = (T)node[m][n][i].asDouble();
                         }
                     }
                     this->Tdata.push_back(temp);
@@ -355,8 +372,25 @@ namespace MultiEigen{
                     this->Tdata.push_back(temp);
                 }
             }
+            void initialize(int a, int b, int c){
+                for (int i = 0; i < c; i ++){
+                    Eigen_2D<T> temp(a, b);
+                    this->Tdata.push_back(temp);
+                }
+            }
             void setData (std::vector<Eigen_2D<T>>& Tdata){
                 this->Tdata.assign(Tdata.begin(), Tdata.end());
+            }
+            void setData(int a, int b, int c, Json::Value node){
+                for (int i = 0; i < c ; i ++){
+                    Eigen_2D<T> temp(b, c);
+                    for (int m = 0; m < a; m ++){
+                        for (int n = 0; n < b; n ++){
+                            temp.getData()(m, n) = (T)node[m][n][i].asDouble();
+                        }
+                    }
+                    this->Tdata.push_back(temp);
+                }//end for
             }
             vector<Eigen_2D<T>>& getData(){
                 return this->Tdata;
@@ -391,8 +425,7 @@ namespace MultiEigen{
     };
 
     template <typename T>
-    struct Eigen_4D
-    {
+    struct Eigen_4D{
         public:
             Eigen_4D(){}
             Eigen_4D(int a, int b, int c, int d, Json::Value node, matrix_type mtype){
@@ -406,7 +439,7 @@ namespace MultiEigen{
                     for (int i = 0; i < d; i ++){
                         Eigen_3D<T> temp_3d;
                         for (int m = 0; m < a; m ++){
-                            Eigen_2D<T> temp_2d;
+                            Eigen_2D<T> temp_2d(b, c);
                             for (int n = 0; n < b; n ++){
                                 for (int j = 0; j < c; j ++){
                                     temp_2d.getData()(n, j) = (T)node[m][n][j][i].asDouble();
@@ -414,6 +447,7 @@ namespace MultiEigen{
                             }
                             temp_3d.getData().push_back(temp_2d);
                         }
+                        this->Qdata.push_back(temp_3d);
                     }
                 }
             }
@@ -421,6 +455,35 @@ namespace MultiEigen{
                 for (int i = 0; i < a; i++){
                     Eigen_3D<T> temp(b, c, d);
                     this->Qdata.push_back(temp);
+                }
+            }
+            void Initialize(int a, int b, int c, int d){
+                for (int i = 0; i < a; i++){
+                    Eigen_3D<T> temp(b, c, d);
+                    this->Qdata.push_back(temp);
+                }
+            }
+            void setData(int a, int b, int c, int d, Json::Value node, matrix_type mtype){
+                this->mtype = mtype;
+                if (this->mtype == matrix_type::image){
+                    for (int i = 0; i < a; i ++){
+                        Eigen_3D<T> temp(b, c, d, node[i]);
+                        this->Qdata.push_back(temp);
+                    }//end for
+                }else{
+                    for (int i = 0; i < d; i ++){
+                        Eigen_3D<T> temp_3d;
+                        for (int m = 0; m < a; m ++){
+                            Eigen_2D<T> temp_2d(b,c);
+                            for (int n = 0; n < b; n ++){
+                                for (int j = 0; j < c; j ++){
+                                    temp_2d.getData()(n, j) = (T)node[m][n][j][i].asDouble();
+                                }
+                            }
+                            temp_3d.getData().push_back(temp_2d);
+                        }
+                        this->Qdata.push_back(temp_3d);
+                    }
                 }
             }
             std::vector<Eigen_3D<T>>& getData(){

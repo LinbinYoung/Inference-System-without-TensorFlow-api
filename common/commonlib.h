@@ -4,6 +4,7 @@
 #include <json/json.h>
 #include <Eigen/Dense>
 #include <assert.h>
+#include <memory>
 
 using namespace Json;
 using namespace Eigen;

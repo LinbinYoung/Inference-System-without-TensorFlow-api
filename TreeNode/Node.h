@@ -5,8 +5,8 @@
 #include <string>
 #include <algorithm>
 #include <DataType/datatype.h>
+#include <DataType/MultiData.h>
 
-using namespace std;
 using namespace MultiEigen;
 
 namespace TopoENV{
@@ -17,8 +17,8 @@ namespace TopoENV{
     template <typename T>
     class MULTINode{
         public:
-            Eigen_2D<T> data;
-            std::string father;
+            TensorData<T> data;
+            string father;
             std::vector<int> shape;
             std::vector<string> children;
             std::string name;
@@ -26,14 +26,15 @@ namespace TopoENV{
         public:
             MULTINode(){}
             ~MULTINode(){}
-            MULTINode(Eigen_2D<T> &new_data, std::string new_father, std::vector<int> new_shape, std::string new_name, std::string new_op, std::vector<string> child_list){
+            MULTINode(TensorData<T> &new_data, string new_father, std::vector<int> new_shape, std::string new_name, std::string new_op, std::vector<string> child_list, int indegree){
                 // Leaf Node like Variable and Placeholder
-                this->data.setData(new_data);
+                this->data = new_data;
                 this->father = new_father;
                 this->shape.assign(new_shape.begin(), new_shape.end());
                 this->name = new_name;
                 this->op = new_op;
                 this->children.assign(child_list.begin(), child_list.end());
+                this->indegree = indegree;
             }
             void reset (const MULTINode<T> &instan){
                 this->data = instan.data;
@@ -42,11 +43,9 @@ namespace TopoENV{
                 this->name = instan.name;
                 this->op = instan.op;
                 this->children.assign(instan.children.begin(), instan.children.end());
+                this->indegree = instan.getDegree();
             }
-            Eigen_2D<T>& getData(){
-                return this->data;
-            }
-            void setData(Eigen_2D<T> const &new_data){
+            void setData(TensorData<T> const &new_data){
                 this->data = new_data;
             }
             std::string getName(){
@@ -58,7 +57,16 @@ namespace TopoENV{
             void setShape(std::vector<int> new_shape){
                 this->shape.assign(new_shape.begin(), new_shape.end());
             }
+            int getDegree() const{
+                return this->indegree;
+            }
+            void setDegree(int val){
+                this->indegree = val;
+            }
+        protected:
+            int indegree;
     };
+
     template <typename T>
     struct TopoNode{
         public:

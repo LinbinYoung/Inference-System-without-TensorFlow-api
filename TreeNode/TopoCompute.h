@@ -3,7 +3,6 @@
 #include <fstream>
 #include <map>
 #include <commonlib.h>
-#include <DataType/datatype.h>
 #include <TreeNode/activator.h>
 #include <Node.h>
 #include <cstdarg>
@@ -34,7 +33,7 @@ namespace TopoENV{
     }
 
     template<typename T>
-    MULTINode<T> ConstructTree(string filepath, map<string, TopoNode<T>> &map_s_n){
+    MULTINode<T> ConstructTree(string filepath, map<string, MULTINode<T>>& map_s_n){
 	    JsonReader reader;
 	    JsonValue froot;
 	    string colon = ":";
@@ -57,42 +56,51 @@ namespace TopoENV{
 				    new_node_name.append(colon);
 				    new_node_name.append(*iter);
                     cout << "*****" << new_node_name << "*****" << endl;
-				    int row_size = -2;
-				    int col_size = -2;
+                    string op = node["OPERATION"].asCString();
+				    int dimension = 1; // default dimension is 1
 				    std::vector<int> shape;
 				    if (!node["SHAPE"].isNull()){
+                        cout << node["SHAPE"].asCString() << endl;
 					    ProcessBracket(node["SHAPE"].asCString(), shape);
-					    row_size = shape[0];
-                        col_size = shape[1];
+					    dimension = shape.size();
 				    }
-				    Eigen_2D<T> Temp_data;
-                    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& matr_data = Temp_data.getData();
-				    if (!node["TENSOR_VALUE"].isNull()){
-					    matr_data.resize(row_size, col_size);
-                        if (col_size == 1){
-                            //in case tensor is one vector, not a matrix
-                            for (int i = 0; i < row_size; i ++){
-                                matr_data(i, 0) = node["TENSOR_VALUE"][i].asDouble();
-                            }
+                    cout << dimension << endl;
+                    TensorData<T> temp_data(tyname::D_0);
+                    if (dimension == 2){
+                        if (shape[1] == 1){
+                            temp_data.setType(tyname::D_1);
+                            Eigen_Vector<T>& s_data = temp_data.E1D;
+                            if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], node["TENSOR_VALUE"]);}
                         }else{
-                            for (int i = 0; i < row_size; i ++){
-						        for (int j = 0; j < col_size; j ++){
-							        matr_data(i, j) = node["TENSOR_VALUE"][i][j].asDouble();
-						        }
-					        }
-                        }//end else
-				    }
+                            temp_data.setType(tyname::D_2);
+                            Eigen_2D<T>& s_data = temp_data.E2D;
+                            if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], node["TENSOR_VALUE"]);}
+                        }
+                    }else if (dimension == 3){
+                        temp_data.setType(tyname::D_3);
+                        Eigen_3D<T>& s_data = temp_data.E3D;
+                        if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], shape[2], node["TENSOR_VALUE"]);}
+                    }else if (dimension == 4){
+                        temp_data.setType(tyname::D_4);
+                        cout << (temp_data.getType() == tyname::D_4) << endl;
+                        //cout << temp_data.getType() << endl;
+                        Eigen_4D<T>& s_data = temp_data.E4D;
+                        if (op == "Identity"){
+                            //which means this is kernel matrix
+                            if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], shape[2], shape[3], node["TENSOR_VALUE"], matrix_type::kernel);}
+                            cout << "Warm Hug" << endl;
+                        }
+                    }
 				    std::vector<string> INPUT;
 				    for (int i = 0; i < node["INPUT"].size(); i ++){
 					    INPUT.push_back(node["INPUT"][i].asCString());
 				    }//end for
-				    string op = node["OPERATION"].asCString();
 				    string type = node["TYPE"].asCString();
                     string father_name = node["FATHER"].isNull()? "None" : node["FATHER"].asCString();
-				    MULTINode<T> newnode(Temp_data, father_name, shape, *iter, op, INPUT);
-                    TopoNode<T> topo_node(newnode, INPUT.size());
+				    MULTINode<T> newnode(temp_data, father_name, shape, *iter, op, INPUT, INPUT.size());
 				    root.reset(newnode);
-				    map_s_n.insert(make_pair(*iter, topo_node));
+                    //store the address of this object
+				    map_s_n.insert(make_pair(*iter, newnode));
 			    }
 		    }//end for
 	    }
