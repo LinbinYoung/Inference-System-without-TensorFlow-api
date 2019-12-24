@@ -80,7 +80,7 @@ namespace TopoENV{
                         if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], shape[2], node["TENSOR_VALUE"]);}
                     }else if (dimension == 4){
                         temp_data.setType(tyname::D_4);
-                        cout << (temp_data.getType() == tyname::D_4) << endl;
+                        // cout << (temp_data.getType() == tyname::D_4) << endl;
                         //cout << temp_data.getType() << endl;
                         Eigen_4D<T>& s_data = temp_data.E4D;
                         if (op == "Identity"){
@@ -114,6 +114,7 @@ namespace TopoENV{
         namemap.insert(make_pair("Reshape", 4));
         namemap.insert(make_pair("Sigmoid", 5));
         namemap.insert(make_pair("Relu", 6));
+        namemap.insert(make_pair("Conv2D",7));
         int_name.insert(make_pair(1, tyname::D_1));
         int_name.insert(make_pair(2, tyname::D_2));
         int_name.insert(make_pair(3, tyname::D_3));
@@ -123,20 +124,22 @@ namespace TopoENV{
         TensorData<T> output;
         std::vector<int> new_shape;
         Eigen_Vector<T> final_res;
+        cout << tnode.op << " ";
         switch(namemap[tnode.op]){
             case 1:
                 cout << "1" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 input_2 = indgree[tnode.children[1]].data;
-                if (input_1.E2D.get_col_length() == input_2.E2D.get_col_length() || input_1.E2D.get_row_length() == input_2.E2D.get_row_length()){
-                    output.setData(input_1.E2D.AddWithoutBroadCast(input_2.E2D));
-                }else{
-                    output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
-                }
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
-                tnode.setData(output);
-                tnode.setShape(new_shape);
+
+                // if (input_1.E2D.get_col_length() == input_2.E2D.get_col_length() || input_1.E2D.get_row_length() == input_2.E2D.get_row_length()){
+                //     output.setData(input_1.E2D.AddWithoutBroadCast(input_2.E2D));
+                // }else{
+                //     output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
+                // }
+                // new_shape.push_back(output.E2D.get_row_length());
+                // new_shape.push_back(output.E2D.get_col_length());
+                // tnode.setData(output);
+                // tnode.setShape(new_shape);
                 cout << "1 finished" << endl;
                 break;
             case 2:
@@ -145,24 +148,24 @@ namespace TopoENV{
                 cout << input_1.E2D.get_col_length() << "=====" << input_1.E2D.get_row_length() << endl;
                 input_2 = indgree[tnode.children[1]].data;
                 cout << input_2.E2D.get_col_length() << "=====" << input_2.E2D.get_row_length() << endl;
-                output.setData(input_1.E2D.Matmul(input_2.E2D));
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
-                tnode.setData(output);
-                tnode.setShape(new_shape);
+                // output.setData(input_1.E2D.Matmul(input_2.E2D));
+                // new_shape.push_back(output.E2D.get_row_length());
+                // new_shape.push_back(output.E2D.get_col_length());
+                // tnode.setData(output);
+                // tnode.setShape(new_shape);
                 cout << "2 finished" << endl;
                 break;
             case 3:
                 cout << "3" << endl;
                 input_1 = indgree[tnode.children[0]].data;
-                output.setData(input_1.E2D.softmax2d(true));
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
-                tnode.setData(output);
-                tnode.setShape(new_shape);
-                final_res = output.E2D.Argmax(true);
-                cout << "Final Result:" << endl;
-                final_res.Printout();
+                // output.setData(input_1.E2D.softmax2d(true));
+                // new_shape.push_back(output.E2D.get_row_length());
+                // new_shape.push_back(output.E2D.get_col_length());
+                // tnode.setData(output);
+                // tnode.setShape(new_shape);
+                // final_res = output.E2D.Argmax(true);
+                // cout << "Final Result:" << endl;
+                // final_res.Printout();
                 cout << "3 finished" << endl;
                 break;
             case 4:
@@ -177,21 +180,21 @@ namespace TopoENV{
             case 5:
                 cout << "5" << endl;
                 input_1 = indgree[tnode.children[0]].data;
-                output.setData(input_1.E2D.apply(MATHLIB::sigmoid<T>));
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
-                tnode.setData(output);
-                tnode.setShape(new_shape);
+                // output.setData(input_1.E2D.apply(MATHLIB::sigmoid<T>));
+                // new_shape.push_back(output.E2D.get_row_length());
+                // new_shape.push_back(output.E2D.get_col_length());
+                // tnode.setData(output);
+                // tnode.setShape(new_shape);
                 cout << "5 finished" << endl;
                 break;
             case 6:
                 cout << "6" << endl;
                 input_1 = indgree[tnode.children[0]].data;
-                output.setData(input_1.E2D.apply(MATHLIB::relu<T>));
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
-                tnode.setData(output);
-                tnode.setShape(new_shape);
+                // output.setData(input_1.E2D.apply(MATHLIB::relu<T>));
+                // new_shape.push_back(output.E2D.get_row_length());
+                // new_shape.push_back(output.E2D.get_col_length());
+                // tnode.setData(output);
+                // tnode.setShape(new_shape);
                 cout << "6 finished" << endl;
                 break;
             default:
@@ -213,6 +216,7 @@ namespace TopoENV{
              int size_of_q = q.size();
              while (size_of_q > 0){
                  string nodename = q.front();
+                 cout << "ABC " << nodename << " CBA" << endl;
                  q.pop_front();
                  MULTINode<T>& tnode = indgree[nodename];
                  //update indgree and queue
@@ -223,13 +227,13 @@ namespace TopoENV{
                     }
                  }
                  string op_name = tnode.op;
-                 if (op_name == "Placeholder"){
-                     tnode.setData(input);
-                 }else if(op_name == "Identity"){
-                    // cout << tnode.data.getData() << endl;
-                 }else{
-                     ComputeAll<T>(indgree, tnode);
-                 }
+                //  if (op_name == "Placeholder"){
+                //      tnode.setData(input);
+                //  }else if(op_name == "Identity"){
+                //     // cout << tnode.data.getData() << endl;
+                //  }else{
+                //      ComputeAll<T>(indgree, tnode);
+                //  }
                  size_of_q --;
              }
         }//end for outer while

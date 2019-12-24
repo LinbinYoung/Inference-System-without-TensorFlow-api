@@ -23,7 +23,7 @@ enum ValueType {
 */
 
 int main(void){
-  string path = "../jsonfile/model1.json";
+  string path = "../jsonfile/model3.json";
   std::map<string, MULTINode<double>> indgree;
   TopoENV::ConstructTree<double>(path, indgree);
   // //Variable_4/read

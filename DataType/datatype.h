@@ -290,7 +290,7 @@ namespace MultiEigen{
             }
             //apply(Relu, Sigmoid ......)
             Eigen_2D<T> apply(const std::function<T(const T&)> &f){
-                Eigen_2D res;
+                Eigen_2D<T> res;
                 res.setData(this->data);
                 // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
                 for (auto iter = res.begin(); iter != res.end(); iter++){
@@ -471,6 +471,9 @@ namespace MultiEigen{
                     this->Qdata.push_back(temp);
                 }
             }
+            void setData(std::vector<Eigen_3D<T>> Qdata){
+                this->Qdata.assign(Qdata.begin(), Qdata.end());
+            }
             void setData(int a, int b, int c, int d, Json::Value node, matrix_type mtype){
                 this->mtype = mtype;
                 if (this->mtype == matrix_type::image){
@@ -508,6 +511,31 @@ namespace MultiEigen{
                         unit_res.Tdata[j] = this->Qdata[i].convd(kernel.Qdata[j], stride, padding);
                     }//end for
                     res[i] = unit_res;
+                }
+                return res;
+            }
+            Eigen_4D<T> AddBoradCast(Eigen_Vector<T> other){
+                Eigen_4D<T> res;
+                res.setData(this->Qdata);
+                //loop thourght all image and do activation
+                for (int i = 0; i < this->Qdata.size(); i ++){
+                    Eigen_3D<T> &t_3d = this->Qdata[i];
+                    for (int j = 0; j < t_3d.getData().size(); j ++){
+                        t_3d.getData()[j].AddBoradCast(other);
+                    }
+                }
+                return res;
+            }
+            Eigen_4D<T> apply(const std::function<T(const T&)> &f){
+                Eigen_4D<T> res;
+                res.setData(this->Qdata);
+                // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
+                //loop thourght all image and do activation
+                for (int i = 0; i < this->Qdata.size(); i ++){
+                    Eigen_3D<T> &t_3d = this->Qdata[i];
+                    for (int j = 0; j < t_3d.getData().size(); j ++){
+                        t_3d.getData()[j].apply(f);
+                    }
                 }
                 return res;
             }
