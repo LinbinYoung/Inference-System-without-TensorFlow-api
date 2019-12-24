@@ -497,6 +497,12 @@ namespace MultiEigen{
                     }
                 }
             }
+            void getShape(std::vector<int>& res){
+                res.push_back(this->Qdata.size());
+                res.push_back(this->Qdata[0].get_row_length());
+                res.push_back(this->Qdata[0].get_col_length());
+                res.push_back(this->Qdata[0].size());
+            }
             std::vector<Eigen_3D<T>>& getData(){
                 return this->Qdata;
             }
