@@ -60,11 +60,9 @@ namespace TopoENV{
 				    int dimension = 1; // default dimension is 1
 				    std::vector<int> shape;
 				    if (!node["SHAPE"].isNull()){
-                        cout << node["SHAPE"].asCString() << endl;
 					    ProcessBracket(node["SHAPE"].asCString(), shape);
 					    dimension = shape.size();
 				    }
-                    cout << dimension << endl;
                     TensorData<T> temp_data(tyname::D_0);
                     if (dimension == 2){
                         if (shape[1] == 1){
@@ -88,7 +86,6 @@ namespace TopoENV{
                         if (op == "Identity"){
                             //which means this is kernel matrix
                             if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], shape[2], shape[3], node["TENSOR_VALUE"], matrix_type::kernel);}
-                            cout << "Warm Hug" << endl;
                         }
                     }
 				    std::vector<string> INPUT;
@@ -108,58 +105,62 @@ namespace TopoENV{
     }
 
     template<typename T>
-	void ComputeAll(map<string, TopoNode<T>> &indgree, MULTINode<T> &tnode){
+	void ComputeAll(map<string, MULTINode<T>> &indgree, MULTINode<T> &tnode){
         std::map<string, int> namemap;
+        std::map<int, tyname> int_name;
         namemap.insert(make_pair("Add", 1));
         namemap.insert(make_pair("MatMul", 2));
         namemap.insert(make_pair("Softmax", 3));
         namemap.insert(make_pair("Reshape", 4));
         namemap.insert(make_pair("Sigmoid", 5));
         namemap.insert(make_pair("Relu", 6));
-        Eigen_2D<T> input_1;
-        Eigen_2D<T> input_2;
-        Eigen_4D<T> image_input;
-        Eigen_2D<T> output;
+        int_name.insert(make_pair(1, tyname::D_1));
+        int_name.insert(make_pair(2, tyname::D_2));
+        int_name.insert(make_pair(3, tyname::D_3));
+        int_name.insert(make_pair(4, tyname::D_4));
+        TensorData<T> input_1;
+        TensorData<T> input_2;
+        TensorData<T> output;
         std::vector<int> new_shape;
         Eigen_Vector<T> final_res;
         switch(namemap[tnode.op]){
             case 1:
                 cout << "1" << endl;
-                input_1 = indgree[tnode.children[0]].getNode().data;
-                input_2 = indgree[tnode.children[1]].getNode().data;
-                if (input_1.get_col_length() != input_2.get_col_length() || input_1.get_row_length() != input_2.get_row_length()){
-                    output = input_1.AddBoradCast(input_2);
+                input_1 = indgree[tnode.children[0]].data;
+                input_2 = indgree[tnode.children[1]].data;
+                if (input_1.E2D.get_col_length() == input_2.E2D.get_col_length() || input_1.E2D.get_row_length() == input_2.E2D.get_row_length()){
+                    output.setData(input_1.E2D.AddWithoutBroadCast(input_2.E2D));
                 }else{
-                    output = input_1.AddWithoutBroadCast(input_2);
+                    output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
                 }
-                new_shape.push_back(output.get_row_length());
-                new_shape.push_back(output.get_col_length());
+                new_shape.push_back(output.E2D.get_row_length());
+                new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 cout << "1 finished" << endl;
                 break;
             case 2:
                 cout << "2" << endl;
-                input_1 = indgree[tnode.children[0]].getNode().data;
-                cout << input_1.get_col_length() << "=====" << input_1.get_row_length() << endl;
-                input_2 = indgree[tnode.children[1]].getNode().data;
-                cout << input_2.get_col_length() << "=====" << input_2.get_row_length() << endl;
-                output = input_1.Matmul(input_2);
-                new_shape.push_back(output.get_row_length());
-                new_shape.push_back(output.get_col_length());
+                input_1 = indgree[tnode.children[0]].data;
+                cout << input_1.E2D.get_col_length() << "=====" << input_1.E2D.get_row_length() << endl;
+                input_2 = indgree[tnode.children[1]].data;
+                cout << input_2.E2D.get_col_length() << "=====" << input_2.E2D.get_row_length() << endl;
+                output.setData(input_1.E2D.Matmul(input_2.E2D));
+                new_shape.push_back(output.E2D.get_row_length());
+                new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 cout << "2 finished" << endl;
                 break;
             case 3:
                 cout << "3" << endl;
-                input_1 = indgree[tnode.children[0]].getNode().data;
-                output = input_1.softmax2d(true);
-                new_shape.push_back(output.get_row_length());
-                new_shape.push_back(output.get_col_length());
+                input_1 = indgree[tnode.children[0]].data;
+                output.setData(input_1.E2D.softmax2d(true));
+                new_shape.push_back(output.E2D.get_row_length());
+                new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
-                final_res = output.Argmax(true);
+                final_res = output.E2D.Argmax(true);
                 cout << "Final Result:" << endl;
                 final_res.Printout();
                 cout << "3 finished" << endl;
@@ -175,20 +176,20 @@ namespace TopoENV{
                 break;
             case 5:
                 cout << "5" << endl;
-                input_1 = indgree[tnode.children[0]].getNode().data;
-                output = input_1.apply(MATHLIB::sigmoid<T>);
-                new_shape.push_back(output.get_row_length());
-                new_shape.push_back(output.get_col_length());
+                input_1 = indgree[tnode.children[0]].data;
+                output.setData(input_1.E2D.apply(MATHLIB::sigmoid<T>));
+                new_shape.push_back(output.E2D.get_row_length());
+                new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 cout << "5 finished" << endl;
                 break;
             case 6:
                 cout << "6" << endl;
-                input_1 = indgree[tnode.children[0]].getNode().data;
-                output = input_1.apply(MATHLIB::relu<T>);
-                new_shape.push_back(output.get_row_length());
-                new_shape.push_back(output.get_col_length());
+                input_1 = indgree[tnode.children[0]].data;
+                output.setData(input_1.E2D.apply(MATHLIB::relu<T>));
+                new_shape.push_back(output.E2D.get_row_length());
+                new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 cout << "6 finished" << endl;
@@ -199,7 +200,7 @@ namespace TopoENV{
     }
 
     template<typename T>
-    void TopoComputeEngine(map<string, TopoNode<T>> indgree, Eigen_2D<T> const input){
+    void TopoComputeEngine(map<string, MULTINode<T>> indgree, TensorData<T> const input){
         std::deque<string> q;
         //initialzied the queue with node of which the indegree in 0
         for (auto iter = indgree.begin(); iter != indgree.end(); iter ++){
@@ -213,7 +214,7 @@ namespace TopoENV{
              while (size_of_q > 0){
                  string nodename = q.front();
                  q.pop_front();
-                 MULTINode<T>& tnode = indgree[nodename].getNode();
+                 MULTINode<T>& tnode = indgree[nodename];
                  //update indgree and queue
                  if (tnode.father != "None"){
                     indgree[tnode.father].setDegree(indgree[tnode.father].getDegree() - 1);

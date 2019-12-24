@@ -24,6 +24,18 @@ namespace MultiEigen{
             void setType(tyname name){
                 this->tname = name;
             }
+            void setData(Eigen_2D<T> E2D){
+                this->E2D = E2D;
+            }
+            void setData(Eigen_Vector<T> E1D){
+                this->E1D = E1D;
+            }
+            void setData(Eigen_3D<T> E3D){
+                this->E3D = E3D;
+            }
+            void setData(Eigen_4D<T> E4D){
+                this->E4D = E4D;
+            }
             Eigen_2D<T> E2D;
             Eigen_3D<T> E3D;
             Eigen_4D<T> E4D;

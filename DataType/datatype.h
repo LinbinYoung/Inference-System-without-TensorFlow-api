@@ -210,6 +210,14 @@ namespace MultiEigen{
                 res.setData(output.transpose());
                 return res;
             }
+            Eigen_2D<T> AddBoradCast(Eigen_Vector<T> new_vec){
+                Eigen_2D<T> res;
+                Eigen::Matrix<T, Eigen::Dynamic, 1>& vec = new_vec.getData();
+                Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data.transpose();
+                output.colwise() += vec;
+                res.setData(output.transpose());
+                return res;
+            }
             //add without broadcast
             Eigen_2D<T> AddWithoutBroadCast(Eigen_2D<T> mat2){
                 Eigen_2D<T> res;
