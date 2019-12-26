@@ -15,11 +15,17 @@ namespace MultiEigen{
                     this->data(i) = (T)node[i].asDouble();
                 }
             }
+            Eigen_Vector(int m){
+                this->data = Eigen::Matrix<T, Eigen::Dynamic, 1>::Random(m);
+            }
             Eigen::Matrix<T, Eigen::Dynamic, 1>& getData(){
                 return this->data;
             }
             void setData(Eigen::Matrix<T, Eigen::Dynamic, 1> current){
                 this->data = current;
+            }
+            int Sinsize(){
+                return this->data.size();
             }
             void setData(int m, Json::Value node){
                 this->data.resize(m);
@@ -33,9 +39,20 @@ namespace MultiEigen{
                 }
                 cout << endl;
             }
+            //auto inline
+            inline T &operator[](int i){
+                return this->data(i);
+            }
+            template <typename U>
+            friend std::ostream& operator<<(std::ostream &os, const Eigen_Vector<U> &m);
         private:
             Eigen::Matrix<T, Eigen::Dynamic, 1> data;
     };
+    template <typename T>
+    std::ostream& operator<<(std::ostream &os, const Eigen_Vector<T> &m){
+        os << "[" << m.data << "]";
+        return os;
+    }
 
     template <typename T>
     class Eigen_Col_iterator{
@@ -92,11 +109,6 @@ namespace MultiEigen{
                 this->data = data;
                 this->data = this->data + index;
             }
-            /*
-                0 1 2
-                3 4 5
-                6 7 8
-            */
             bool isValid(){
                 return this->cur_index < this->max_size;
             }
@@ -145,6 +157,7 @@ namespace MultiEigen{
         valid,
         same
     };
+
     #define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
     #define NEEDED_DIMENSION(input, filter, stride) ((((input/stride))-1) * (stride) + filter - input)
     template <typename T>
@@ -162,12 +175,15 @@ namespace MultiEigen{
                     }
                 }
             }
-            void initialize(int m, int n){
-                this->data =  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Random(m,n);
-            }
             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& getData(){
                 return this->data;
             }
+            T &operator()(int x, int y){
+                return this->data(x, y);
+            }
+            template <typename U>
+            friend std::ostream& operator<<(std::ostream &os,  Eigen_2D<U> &m);
+
             void setData(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> current){
                 this->data = current;
             }
@@ -182,27 +198,33 @@ namespace MultiEigen{
                     }
                 }
             }
-            size_t get_col_length(){
+            void initialize(int m, int n){
+                this->data =  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Random(m,n);
+            }
+            size_t cols(){
                 return this->data.cols();
             }
-            size_t get_row_length(){
+            size_t rows(){
                 return this->data.rows();
             }
+            void resize(int m, int n){
+                this->data.resize(m, n);
+            }
             Eigen_2D_iterator<T> begin(){
-                Eigen_2D_iterator<T> b(&this->data(0,0), 0, this->get_col_length(), this->get_row_length());
+                Eigen_2D_iterator<T> b(&this->data(0,0), 0, this->cols(), this->rows());
                 return b;
             }
             Eigen_2D_iterator<T> end(){
-                Eigen_2D_iterator<T> b(&this->data(0,0), this->get_col_length()*this->get_row_length(), this->get_col_length(), this->get_row_length());
+                Eigen_2D_iterator<T> b(&this->data(0,0), this->cols()*this->rows(), this->cols(), this->rows());
                 return b;
             }
         public:
             //add with broadcast
             Eigen_2D<T> AddBoradCast(Eigen_2D<T> new_vec){
                 Eigen_2D<T> res;
-                Eigen::Matrix<T, Eigen::Dynamic, 1> vec(new_vec.get_row_length());
+                Eigen::Matrix<T, Eigen::Dynamic, 1> vec(new_vec.rows());
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& vec_infere = new_vec.getData();
-                for(int i = 0; i < new_vec.get_row_length(); i ++){
+                for(int i = 0; i < new_vec.rows(); i ++){
                     vec(i) = vec_infere(i,0);
                 }
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data.transpose();
@@ -212,8 +234,6 @@ namespace MultiEigen{
             }
             Eigen_2D<T> AddBoradCast(Eigen_Vector<T> new_vec){
                 Eigen_2D<T> res;
-                cout << new_vec.getData().size() << endl;
-                cout << this->data.cols() << "=======" << this->data.rows() << endl;
                 Eigen::Matrix<T, Eigen::Dynamic, 1>& vec = new_vec.getData();
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data.transpose();
                 output.colwise() += vec;
@@ -221,7 +241,7 @@ namespace MultiEigen{
                 return res;
             }
             void AddBoradCast(Eigen_Vector<T> new_vec, int index){
-                T single_add = new_vec.getData()[index];
+                T single_add = new_vec[index];
                 for (auto iter = this->begin(); iter != this->end(); iter++){
                     //std::transform(iter.begin(), iter.end(), iter.begin(), f);
                     for (auto elem = iter.begin(); elem != iter.end(); elem ++){
@@ -258,8 +278,8 @@ namespace MultiEigen{
                 int up = 0;
                 int down = 0;
                 if (padding == padding_type::same){
-                    int x_needed = NEEDED_DIMENSION(this->get_col_length(), kernel.get_col_length(), x_axis_stride);
-                    int y_needed = NEEDED_DIMENSION(this->get_row_length(), kernel.get_row_length(), y_axis_stride);
+                    int x_needed = NEEDED_DIMENSION(this->cols(), kernel.cols(), x_axis_stride);
+                    int y_needed = NEEDED_DIMENSION(this->rows(), kernel.rows(), y_axis_stride);
                     left = x_needed / 2;
                     right = x_needed - left;
                     up = y_needed / 2;
@@ -267,29 +287,29 @@ namespace MultiEigen{
                 }
                 //return shape
                 Eigen_2D<T> res;
-                int col_shape = right+left+this->data.cols();
-                int row_shape = up+down+this->data.rows();
-                int ac_col_shape = FILTER_DIM(col_shape, kernel.data.cols(), x_axis_stride);
-                int ac_row_shape = FILTER_DIM(row_shape, kernel.data.rows(), y_axis_stride);
+                int col_shape = right+left+this->cols();
+                int row_shape = up+down+this->rows();
+                int ac_col_shape = FILTER_DIM(col_shape, kernel.cols(), x_axis_stride);
+                int ac_row_shape = FILTER_DIM(row_shape, kernel.rows(), y_axis_stride);
                 //expand the image with possible padding
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> new_image;
                 new_image.resize(row_shape, col_shape);
-                new_image.block(up, left, this->get_row_length(), this->get_col_length()) << this->data;
+                new_image.block(up, left, this->rows(), this->cols()) << this->data;
                 //left padding
                 new_image.block(0, 0, row_shape, left) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, left);
                 //right paddding
-                new_image.block(0, left+this->get_col_length(), row_shape, right) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, right);
+                new_image.block(0, left+this->cols(), row_shape, right) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(row_shape, right);
                 //up padding
                 new_image.block(0, 0, up, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(up, col_shape);
                 //down padding
-                new_image.block(up+this->get_row_length(), 0, down, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(down, col_shape);
+                new_image.block(up+this->rows(), 0, down, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(down, col_shape);
                 //now start compute the convd_base
-                res.getData().resize(ac_row_shape, ac_col_shape);
+                res.resize(ac_row_shape, ac_col_shape);
                 for (int i = 0; i < ac_row_shape; i ++){
                     for (int j = 0; j < ac_col_shape; j ++){
-                        Map<Eigen::Matrix<T, Eigen::Dynamic, 1>> v1(new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).data(), new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).size());
+                        Map<Eigen::Matrix<T, Eigen::Dynamic, 1>> v1(new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.rows(), kernel.cols()).data(), new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.rows(), kernel.cols()).size());
                         Map<Eigen::Matrix<T, Eigen::Dynamic, 1>> v2(kernel.getData().data(), kernel.getData().size());
-                        res.getData()(i, j) = v1.dot(v2);
+                        res(i, j) = v1.dot(v2);
                     }
                 }
                 return res;
@@ -372,6 +392,12 @@ namespace MultiEigen{
     };
 
     template <typename T>
+    std::ostream& operator<<(std::ostream &os,  Eigen_2D<T> &m){
+        os << "[" << m.data << "]";
+        return os;
+    }
+
+    template <typename T>
     struct Eigen_3D{
         //represent one picture or kernel
         public:
@@ -393,6 +419,15 @@ namespace MultiEigen{
                     this->Tdata.push_back(temp);
                 }
             }
+            int Tsize(){
+                return this->Tdata.size();
+            }
+            Eigen_2D<T>& operator[](int index){
+                return this->Tdata[index];
+            }
+            template <typename U>
+            friend std::ostream& operator<<(std::ostream &os, Eigen_3D<U> &m);
+
             void initialize(int a, int b, int c){
                 for (int i = 0; i < c; i ++){
                     Eigen_2D<T> temp(a, b);
@@ -407,7 +442,7 @@ namespace MultiEigen{
                     Eigen_2D<T> temp(a, b);
                     for (int m = 0; m < a; m ++){
                         for (int n = 0; n < b; n ++){
-                            temp.getData()(m, n) = (T)node[m][n][i].asDouble();
+                            temp(m, n) = (T)node[m][n][i].asDouble();
                         }
                     }
                     this->Tdata.push_back(temp);
@@ -416,29 +451,41 @@ namespace MultiEigen{
             vector<Eigen_2D<T>>& getData(){
                 return this->Tdata;
             }
-            size_t get_row_length(){
+            size_t rows(){
                 assert(this->Tdata.size() != 0); //check if we initialized the Tdata
-                return this->Tdata[0].getData().rows();
+                return this->Tdata[0].rows();
             }
-            size_t get_col_length(){
+            size_t cols(){
                 assert(this->Tdata.size() != 0); //check if we initialized the Tdata
-                return this->Tdata[0].getData().cols();
-            }
-            int num_of_matrix(){
-                return this->Tdata.size();
+                return this->Tdata[0].cols();
             }
             Eigen_2D<T> convd(Eigen_3D<T> kernel, std::vector<int> stride, padding_type padding){
                 //Maybe we should insert one assert here to make my program more robust
-                assert(this->Tdata.size() > 0 && kernel.getData().size() > 0 && this->Tdata.size() == kernel.getData().size());
-                Eigen_2D<T> res = this->Tdata[0].convd_base(kernel.getData()[0], stride, padding);
+                assert(this->Tsize() > 0 && kernel.Tsize() > 0 && this->Tsize() == kernel.Tsize());
+                Eigen_2D<T> res = this->Tdata[0].convd_base(kernel[0], stride, padding);
                 for (int i = 1; i < this->Tdata.size(); i ++){
-                    res.AddWithoutBroadCast(this->Tdata[i].convd_base(kernel.getData()[i], stride, padding));
+                    res.AddWithoutBroadCast(this->Tdata[i].convd_base(kernel[i], stride, padding));
                 }
                 return res;
             }
         private:
             std::vector<Eigen_2D<T>> Tdata;
     };
+
+    template <typename U>
+    std::ostream& operator<<(std::ostream &os, Eigen_3D<U> &m){
+        os << "[" << endl;
+        for (int i = 0; i < m.Tsize(); i ++){
+            cout << m[i];
+            if (i != m.Tsize() - 1){
+                os << "," << endl << endl;
+            }else{
+                os << endl;
+            }
+        }
+        os << "]" << endl;
+        return os;
+    }
 
     enum struct matrix_type{
         kernel,
@@ -463,7 +510,7 @@ namespace MultiEigen{
                             Eigen_2D<T> temp_2d(a,b);
                             for (int n = 0; n < a; n ++){
                                 for (int j = 0; j < b; j ++){
-                                    temp_2d.getData()(n, j) = (T)node[n][j][m][i].asDouble();
+                                    temp_2d(n, j) = (T)node[n][j][m][i].asDouble();
                                 }
                             }
                             temp_3d.getData().push_back(temp_2d);
@@ -478,6 +525,14 @@ namespace MultiEigen{
                     this->Qdata.push_back(temp);
                 }
             }
+            int Qsize(){
+                return this->Qdata.size();
+            }
+            Eigen_3D<T>& operator[] (int index){
+                return this->Qdata[index];
+            }
+            template <typename U>
+            friend std::ostream& operator<<(std::ostream &os, const Eigen_4D<U> &m);
             void Initialize(int a, int b, int c, int d){
                 for (int i = 0; i < a; i++){
                     Eigen_3D<T> temp(b, c, d);
@@ -501,7 +556,7 @@ namespace MultiEigen{
                             Eigen_2D<T> temp_2d(a,b);
                             for (int n = 0; n < a; n ++){
                                 for (int j = 0; j < b; j ++){
-                                    temp_2d.getData()(n, j) = (T)node[n][j][m][i].asDouble();
+                                    temp_2d(n, j) = (T)node[n][j][m][i].asDouble();
                                 }
                             }
                             temp_3d.getData().push_back(temp_2d);
@@ -512,8 +567,8 @@ namespace MultiEigen{
             }
             void getShape(std::vector<int>& res){
                 res.push_back(this->Qdata.size());
-                res.push_back(this->Qdata[0].get_row_length());
-                res.push_back(this->Qdata[0].get_col_length());
+                res.push_back(this->Qdata[0].rows());
+                res.push_back(this->Qdata[0].cols());
                 res.push_back(this->Qdata[0].getData().size());
             }
             std::vector<Eigen_3D<T>>& getData(){
@@ -526,7 +581,7 @@ namespace MultiEigen{
                     Eigen_3D<T> unit_res;
                     unit_res.getData().resize(kernel.getData().size()); //equal to the number of filters
                     for (int j = 0; j < kernel.getData().size(); j ++){
-                        unit_res.getData()[j] = this->Qdata[i].convd(kernel.getData()[j], stride, padding);
+                        unit_res[j] = this->Qdata[i].convd(kernel[j], stride, padding);
                     }//end for
                     res.getData().push_back(unit_res);
                 }
@@ -539,7 +594,7 @@ namespace MultiEigen{
                 for (int i = 0; i < this->Qdata.size(); i ++){
                     Eigen_3D<T> &t_3d = res.getData()[i];
                     for (int j = 0; j < t_3d.getData().size(); j ++){
-                        t_3d.getData()[j].AddBoradCast(other, j);
+                        t_3d[j].AddBoradCast(other, j);
                     }
                 }
                 return res;
@@ -552,7 +607,7 @@ namespace MultiEigen{
                 for (int i = 0; i < this->Qdata.size(); i ++){
                     Eigen_3D<T> &t_3d = this->Qdata[i];
                     for (int j = 0; j < t_3d.getData().size(); j ++){
-                        t_3d.getData()[j].apply(f);
+                        t_3d[j].apply(f);
                     }
                 }
                 return res;
@@ -568,17 +623,17 @@ namespace MultiEigen{
             #define CALCULATE_INDEX(channel_index, num_of_c, col_size, i, j) (channel_index + col_size*num_of_c*i + num_of_c*j)
             Eigen_2D<T> reshape(){
                 assert(this->Qdata.size() > 0); //To ensure the correctness of the following code
-                Eigen_2D<T> res(this->Qdata.size(), this->Qdata[0].get_row_length()*this->Qdata[0].get_col_length()*this->Qdata[0].getData().size());
+                Eigen_2D<T> res(this->Qdata.size(), this->Qdata[0].rows()*this->Qdata[0].cols()*this->Qdata[0].getData().size());
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& res_data = res.getData();
-                size_t num_of_c = this->Qdata[0].getData().size();
-                for (int m = 0; m < this->Qdata.size(); m ++){
+                size_t num_of_c = this->Qdata[0].Tsize();
+                for (int m = 0; m < this->Qsize(); m ++){
                     // Efficient loop through 3D map
                     for (int n_c = 0; n_c < num_of_c; n_c ++){
                         //fetch one specific channel
-                        Eigen_2D<T> image_map = this->Qdata[m].getData()[n_c];
-                        for (int i = 0; i < image_map.get_row_length(); i++){
-                            for (int j = 0; j < image_map.get_col_length(); j ++){
-                                res_data(m, CALCULATE_INDEX(n_c, num_of_c,image_map.get_col_length(), i, j)) = image_map.getData()(i,j);
+                        Eigen_2D<T> image_map = this->Qdata[m][n_c];
+                        for (int i = 0; i < image_map.rows(); i++){
+                            for (int j = 0; j < image_map.cols(); j ++){
+                                res_data(m, CALCULATE_INDEX(n_c, num_of_c,image_map.cols(), i, j)) = image_map(i,j);
                             }
                         }//loop through the image
                     }
@@ -589,6 +644,20 @@ namespace MultiEigen{
             std::vector<Eigen_3D<T>> Qdata;
             matrix_type mtype = matrix_type::image;
     };
+    template <typename T>
+    std::ostream& operator<<(std::ostream &os, Eigen_4D<T> &m){
+        os << "[" << endl;
+        for (int i = 0; i < m.Qsize(); i ++){
+            cout << m[i];
+            if (i != m.Qsize() - 1){
+                os << "," << endl;
+            }else{
+                os << endl;
+            }
+        }
+        os << "]" << endl;
+        return os;
+    }
 }
 
 #endif

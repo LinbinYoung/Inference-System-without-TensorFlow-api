@@ -112,7 +112,6 @@ namespace TopoENV{
 				    root.reset(newnode);
                     //store the address of this object
 				    map_s_n.insert(make_pair(*iter, newnode));
-                    cout << *iter << endl;
 			    }
 		    }//end for
 	    }
@@ -134,138 +133,143 @@ namespace TopoENV{
         TensorData<T> output;
         std::vector<int> new_shape;
         Eigen_Vector<T> final_res;
-        cout << tnode.name << " ";
+        cout << "-" <<tnode.name << endl;
+        cout << "{" << endl;
         tyname type_name;
         switch(namemap[tnode.op]){
             case 1:
-                cout << "1" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 input_2 = indgree[tnode.children[1]].data;
                 type_name = input_1.getType();
-                // printf("%d\n", type_name);
-                // cout << "ABCDEFG" << endl;
-                // cout << (type_name == tyname::D_2) << endl;
-                // cout << (type_name == tyname::D_4) << endl;
-                // cout << "ABCDEFG" << endl;
                 if (type_name == tyname::D_2){
                     //D_2
-                    if (input_1.E2D.get_col_length() == input_2.E2D.get_col_length() || input_1.E2D.get_row_length() == input_2.E2D.get_row_length()){
+                    cout << "   input_1: " <<"(" << input_1.E2D.rows() << "," << input_1.E2D.cols() << ")" << endl;
+                    if (input_1.E2D.cols() == input_2.E2D.cols() || input_1.E2D.rows() == input_2.E2D.rows()){
+                        cout << "   input_2: " <<"(" << input_2.E2D.rows() << "," << input_2.E2D.cols() << ")" << endl;
                         output.setData(input_1.E2D.AddWithoutBroadCast(input_2.E2D));
                     }else{
+                        cout << "   input_2: " <<"(" << input_2.E1D.Sinsize() << ")" << endl;
                         output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
                     }
                     output.setType(tyname::D_2);
-                    new_shape.push_back(output.E2D.get_row_length());
-                    new_shape.push_back(output.E2D.get_col_length());
+                    cout << "   output: " <<"(" << output.E2D.rows() << "," << output.E2D.cols() << ")" << endl;
+                    new_shape.push_back(output.E2D.rows());
+                    new_shape.push_back(output.E2D.cols());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
                     //D_4
-                    // cout << "The brightest star in the sky" << endl;
-                    // cout << input_1.E4D.getData().size() << endl;
-                    // cout << input_1.E4D.getData()[0].getData().size() << endl;
-                    // cout << input_1.E4D.getData()[0].getData()[0].getData().rows() << endl;
-                    // cout << input_1.E4D.getData()[0].getData()[0].getData().cols() << endl;
+                    cout << "   input_1: " <<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
+                    cout << "   input_2: " <<"(" << input_2.E1D.Sinsize() << ")" << endl;
                     output.setData(input_1.E4D.AddBoradCast(input_2.E1D));
                     output.E4D.getShape(new_shape);
                     output.setType(tyname::D_4);
+                    cout << "   output: " <<"(" << output.E4D.Qsize() << "," << output.E4D[0][0].rows() << "," << output.E4D[0][0].cols() << "," << output.E4D[0].Tsize() << ")"<<endl;
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
-                cout << "1 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 2:
-                cout << "2" << endl;
                 input_1 = indgree[tnode.children[0]].data;
-                cout << input_1.E2D.get_col_length() << "=====" << input_1.E2D.get_row_length() << endl;
                 input_2 = indgree[tnode.children[1]].data;
-                cout << input_2.E2D.get_col_length() << "=====" << input_2.E2D.get_row_length() << endl;
+                cout << "   input_1: " <<"(" << input_1.E2D.rows() << "," << input_1.E2D.cols() << ")" << endl;
+                cout << "   input_2: " <<"(" << input_2.E2D.rows() << "," << input_2.E2D.cols() << ")" << endl;
                 output.setData(input_1.E2D.Matmul(input_2.E2D));
                 output.setType(tyname::D_2);
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
+                cout << "   output: " <<"(" << output.E2D.rows() << "," << output.E2D.cols() << ")" << endl;
+                new_shape.push_back(output.E2D.rows());
+                new_shape.push_back(output.E2D.cols());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
-                cout << "2 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 3:
-                cout << "3" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 output.setData(input_1.E2D.softmax2d(true));
                 output.setType(tyname::D_2);
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
+                new_shape.push_back(output.E2D.rows());
+                new_shape.push_back(output.E2D.cols());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 final_res = output.E2D.Argmax(true);
-                cout << "Final Result:" << endl;
+                cout << "   Final Result:" << endl << "   ";
                 final_res.Printout();
-                cout << "3 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 4:
-                cout << "4" << endl;
                 input_1 = indgree[tnode.children[0]].data;
+                cout << "   input_1: " <<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
                 output.setData(input_1.E4D.reshape());
-                new_shape.push_back(output.E2D.get_row_length());
-                new_shape.push_back(output.E2D.get_col_length());
                 output.setType(tyname::D_2);
+                cout << "   output: " <<"(" << output.E2D.rows() << "," << output.E2D.cols() << ")" << endl;
+                new_shape.push_back(output.E2D.rows());
+                new_shape.push_back(output.E2D.cols());
                 tnode.setData(output);
                 tnode.setShape(new_shape);
-                cout << "4 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 5:
-                cout << "5" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 type_name = input_1.getType();
                 if (type_name == tyname::D_2){
+                    cout << "   input_1: " <<"(" << input_1.E2D.rows() << "," << input_1.E2D.cols() << ")" << endl;
                     output.setData(input_1.E2D.apply(MATHLIB::sigmoid<T>));
                     output.setType(tyname::D_2);
-                    new_shape.push_back(output.E2D.get_row_length());
-                    new_shape.push_back(output.E2D.get_col_length());
+                    cout << "   output: " <<"(" << output.E2D.rows() << "," << output.E2D.cols() << ")" << endl;
+                    new_shape.push_back(output.E2D.rows());
+                    new_shape.push_back(output.E2D.cols());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
+                    cout << "   input_1: "<<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
                     output.setData(input_1.E4D.apply(MATHLIB::sigmoid<T>));
                     output.E4D.getShape(new_shape);
                     output.setType(tyname::D_4);
+                    cout << "   output: " <<"(" << output.E4D.Qsize() << "," << output.E4D[0][0].rows() << "," << output.E4D[0][0].cols() << "," << output.E4D[0].Tsize() << ")"<<endl;
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
-                cout << "5 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 6:
-                cout << "6" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 type_name = input_1.getType();
                 if (type_name == tyname::D_2){
+                    cout << "   input_1: " <<"(" << input_1.E2D.rows() << "," << input_1.E2D.cols() << ")" << endl;
                     output.setData(input_1.E2D.apply(MATHLIB::relu<T>));
                     output.setType(tyname::D_2);
-                    new_shape.push_back(output.E2D.get_row_length());
-                    new_shape.push_back(output.E2D.get_col_length());
+                    cout << "   output: " <<"(" << output.E2D.rows() << "," << output.E2D.cols() << ")" << endl;
+                    new_shape.push_back(output.E2D.rows());
+                    new_shape.push_back(output.E2D.cols());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
+                    cout << "   input_1: "<<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
                     output.setData(input_1.E4D.apply(MATHLIB::relu<T>));
                     output.setType(tyname::D_4);
+                    cout << "   output: " <<"(" << output.E4D.Qsize() << "," << output.E4D[0][0].rows() << "," << output.E4D[0][0].cols() << "," << output.E4D[0].Tsize() << ")"<<endl;
                     output.E4D.getShape(new_shape);
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
-                cout << "6 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             case 7:
-                cout << "7" << endl;
                 input_1 = indgree[tnode.children[0]].data; //image
                 input_2 = indgree[tnode.children[1]].data; //kernel
+                cout << "   image: "<<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
+                cout << "   kernel: "<<"(" << input_2.E4D.Qsize() << "," << input_2.E4D[0][0].rows() << "," << input_2.E4D[0][0].cols() << "," << input_2.E4D[0].Tsize() << ")"<<endl;
                 output.setData(input_1.E4D.convd_with_multi_filter(input_2.E4D, tnode.stride, tnode.pad_type));
-                cout << "(" << output.E4D.getData().size() << "," << output.E4D.getData()[0].getData()[0].getData().rows() << "," << output.E4D.getData()[0].getData()[0].getData().cols() << "," << output.E4D.getData()[0].getData().size() << ")"<<endl;
                 output.setType(tyname::D_4);
+                cout << "   output: " <<"(" << output.E4D.Qsize() << "," << output.E4D[0][0].rows() << "," << output.E4D[0][0].cols() << "," << output.E4D[0].Tsize() << ")"<<endl;
                 tnode.setData(output);
-                cout << "7 finished" << endl;
+                cout << "   finished" << endl;
                 break;
             default:
-                cout << "Invalid Operation!!!" << endl;
+                cout << "   Invalid Operation!!!" << endl;
         }
+        cout << "}" << endl;
     }
 
     template<typename T>
