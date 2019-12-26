@@ -20,30 +20,36 @@ namespace TopoENV{
             TensorData<T> data;
             string father;
             std::vector<int> shape;
+            std::vector<int> stride;
             std::vector<string> children;
             std::string name;
             std::string op;
+            MultiEigen::padding_type pad_type;
         public:
             MULTINode(){}
             ~MULTINode(){}
-            MULTINode(TensorData<T> &new_data, string new_father, std::vector<int> new_shape, std::string new_name, std::string new_op, std::vector<string> child_list, int indegree){
+            MULTINode(TensorData<T> &new_data, string new_father, std::vector<int> new_shape, std::vector<int> new_stride, std::string new_name, std::string new_op, std::vector<string> child_list, int indegree, MultiEigen::padding_type pad_type){
                 // Leaf Node like Variable and Placeholder
                 this->data = new_data;
                 this->father = new_father;
                 this->shape.assign(new_shape.begin(), new_shape.end());
+                this->stride.assign(new_stride.begin(), new_stride.end());
                 this->name = new_name;
                 this->op = new_op;
                 this->children.assign(child_list.begin(), child_list.end());
                 this->indegree = indegree;
+                this->pad_type = pad_type;
             }
             void reset (const MULTINode<T> &instan){
                 this->data = instan.data;
                 this->father = instan.father;
                 this->shape.assign(instan.shape.begin(), instan.shape.end());
+                this->stride.assign(instan.stride.begin(), instan.stride.end());
                 this->name = instan.name;
                 this->op = instan.op;
                 this->children.assign(instan.children.begin(), instan.children.end());
                 this->indegree = instan.getDegree();
+                this->pad_type = instan.pad_type;
             }
             void setData(TensorData<T> const &new_data){
                 this->data = new_data;
@@ -51,35 +57,14 @@ namespace TopoENV{
             std::string getName(){
                 return this->father;
             }
-            std::vector<int> getShape(){
+            std::vector<int>& getShape(){
                 return this->shape;
             }
             void setShape(std::vector<int> new_shape){
                 this->shape.assign(new_shape.begin(), new_shape.end());
             }
-            int getDegree() const{
-                return this->indegree;
-            }
-            void setDegree(int val){
-                this->indegree = val;
-            }
-        protected:
-            int indegree;
-    };
-
-    template <typename T>
-    struct TopoNode{
-        public:
-            TopoNode(){}
-            TopoNode(MULTINode<T> newnode, int in){
-                //copy the value of newnode
-                this->node = newnode;
-                this->indegree = in;
-            }
-            MULTINode<T>& getNode(){
-                //why we should put one & here
-                //We want to transfer the reference of the varibale 
-                return this->node;
+            void setStride(std::vector<int> new_stride){
+                this->stride.assign(new_stride.begin(), new_stride.end());
             }
             int getDegree() const{
                 return this->indegree;
@@ -88,8 +73,6 @@ namespace TopoENV{
                 this->indegree = val;
             }
         protected:
-            //less strict than private, could be adopted by its derivatives
-            MULTINode<T> node;
             int indegree;
     };
 }

@@ -212,11 +212,22 @@ namespace MultiEigen{
             }
             Eigen_2D<T> AddBoradCast(Eigen_Vector<T> new_vec){
                 Eigen_2D<T> res;
+                cout << new_vec.getData().size() << endl;
+                cout << this->data.cols() << "=======" << this->data.rows() << endl;
                 Eigen::Matrix<T, Eigen::Dynamic, 1>& vec = new_vec.getData();
                 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> output = this->data.transpose();
                 output.colwise() += vec;
                 res.setData(output.transpose());
                 return res;
+            }
+            void AddBoradCast(Eigen_Vector<T> new_vec, int index){
+                T single_add = new_vec.getData()[index];
+                for (auto iter = this->begin(); iter != this->end(); iter++){
+                    //std::transform(iter.begin(), iter.end(), iter.begin(), f);
+                    for (auto elem = iter.begin(); elem != iter.end(); elem ++){
+                        *elem = *elem + single_add;
+                    }
+                }
             }
             //add without broadcast
             Eigen_2D<T> AddWithoutBroadCast(Eigen_2D<T> mat2){
@@ -240,8 +251,8 @@ namespace MultiEigen{
             }
             //convd
             Eigen_2D<T> convd_base(Eigen_2D<T> kernel, std::vector<int> stride, padding_type padding){
-                int x_axis_stride = stride[0];
-                int y_axis_stride = stride[1];
+                int x_axis_stride = stride[1];
+                int y_axis_stride = stride[2]; //leave out the 0th and 3th elements
                 int left = 0;
                 int right = 0;
                 int up = 0;
@@ -273,10 +284,12 @@ namespace MultiEigen{
                 //down padding
                 new_image.block(up+this->get_row_length(), 0, down, col_shape) << Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(down, col_shape);
                 //now start compute the convd_base
-                res.data.resize(ac_row_shape, ac_col_shape);
+                res.getData().resize(ac_row_shape, ac_col_shape);
                 for (int i = 0; i < ac_row_shape; i ++){
                     for (int j = 0; j < ac_col_shape; j ++){
-                        res.data(i, j) = new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).dot(kernel);
+                        Map<Eigen::Matrix<T, Eigen::Dynamic, 1>> v1(new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).data(), new_image.block(i*x_axis_stride, j*y_axis_stride, kernel.get_row_length(), kernel.get_col_length()).size());
+                        Map<Eigen::Matrix<T, Eigen::Dynamic, 1>> v2(kernel.getData().data(), kernel.getData().size());
+                        res.getData()(i, j) = v1.dot(v2);
                     }
                 }
                 return res;
@@ -365,7 +378,7 @@ namespace MultiEigen{
             Eigen_3D(){}
             Eigen_3D(int a, int b, int c, Json::Value node){
                 for (int i = 0; i < c ; i ++){
-                    Eigen_2D<T> temp(b, c);
+                    Eigen_2D<T> temp(a, b);
                     for (int m = 0; m < a; m ++){
                         for (int n = 0; n < b; n ++){
                             temp.getData()(m, n) = (T)node[m][n][i].asDouble();
@@ -391,7 +404,7 @@ namespace MultiEigen{
             }
             void setData(int a, int b, int c, Json::Value node){
                 for (int i = 0; i < c ; i ++){
-                    Eigen_2D<T> temp(b, c);
+                    Eigen_2D<T> temp(a, b);
                     for (int m = 0; m < a; m ++){
                         for (int n = 0; n < b; n ++){
                             temp.getData()(m, n) = (T)node[m][n][i].asDouble();
@@ -416,10 +429,10 @@ namespace MultiEigen{
             }
             Eigen_2D<T> convd(Eigen_3D<T> kernel, std::vector<int> stride, padding_type padding){
                 //Maybe we should insert one assert here to make my program more robust
-                assert(this->Tdata.size() > 0 && kernel.Tdata.size() > 0 && this->Tdata.size() == kernel.Tdata.size());
-                Eigen_2D<T> res = this->Tdata[0].convd_base(kernel.Tdata[0], stride, padding);
+                assert(this->Tdata.size() > 0 && kernel.getData().size() > 0 && this->Tdata.size() == kernel.getData().size());
+                Eigen_2D<T> res = this->Tdata[0].convd_base(kernel.getData()[0], stride, padding);
                 for (int i = 1; i < this->Tdata.size(); i ++){
-                    res.AddWithoutBroadCast(this->Tdata[i].convd_base(kernel.Tdata[i], stride, padding));
+                    res.AddWithoutBroadCast(this->Tdata[i].convd_base(kernel.getData()[i], stride, padding));
                 }
                 return res;
             }
@@ -446,11 +459,11 @@ namespace MultiEigen{
                 }else{
                     for (int i = 0; i < d; i ++){
                         Eigen_3D<T> temp_3d;
-                        for (int m = 0; m < a; m ++){
-                            Eigen_2D<T> temp_2d(b, c);
-                            for (int n = 0; n < b; n ++){
-                                for (int j = 0; j < c; j ++){
-                                    temp_2d.getData()(n, j) = (T)node[m][n][j][i].asDouble();
+                        for (int m = 0; m < c; m ++){
+                            Eigen_2D<T> temp_2d(a,b);
+                            for (int n = 0; n < a; n ++){
+                                for (int j = 0; j < b; j ++){
+                                    temp_2d.getData()(n, j) = (T)node[n][j][m][i].asDouble();
                                 }
                             }
                             temp_3d.getData().push_back(temp_2d);
@@ -484,11 +497,11 @@ namespace MultiEigen{
                 }else{
                     for (int i = 0; i < d; i ++){
                         Eigen_3D<T> temp_3d;
-                        for (int m = 0; m < a; m ++){
-                            Eigen_2D<T> temp_2d(b,c);
-                            for (int n = 0; n < b; n ++){
-                                for (int j = 0; j < c; j ++){
-                                    temp_2d.getData()(n, j) = (T)node[m][n][j][i].asDouble();
+                        for (int m = 0; m < c; m ++){
+                            Eigen_2D<T> temp_2d(a,b);
+                            for (int n = 0; n < a; n ++){
+                                for (int j = 0; j < b; j ++){
+                                    temp_2d.getData()(n, j) = (T)node[n][j][m][i].asDouble();
                                 }
                             }
                             temp_3d.getData().push_back(temp_2d);
@@ -501,7 +514,7 @@ namespace MultiEigen{
                 res.push_back(this->Qdata.size());
                 res.push_back(this->Qdata[0].get_row_length());
                 res.push_back(this->Qdata[0].get_col_length());
-                res.push_back(this->Qdata[0].size());
+                res.push_back(this->Qdata[0].getData().size());
             }
             std::vector<Eigen_3D<T>>& getData(){
                 return this->Qdata;
@@ -509,14 +522,13 @@ namespace MultiEigen{
             Eigen_4D<T> convd_with_multi_filter(Eigen_4D<T> kernel, std::vector<int> stride, padding_type padding){
                 assert(this->mtype == matrix_type::image); // to ensure the validity of this function
                 Eigen_4D<T> res;
-                res.Qdata.resize(this->Qdata.size());
                 for (int i = 0; i < this->Qdata.size(); i ++){
                     Eigen_3D<T> unit_res;
-                    unit_res.Tdata.resize(kernel.Qdata.size());
-                    for (int j = 0; j < kernel.Qdata.size(); j ++){
-                        unit_res.Tdata[j] = this->Qdata[i].convd(kernel.Qdata[j], stride, padding);
+                    unit_res.getData().resize(kernel.getData().size()); //equal to the number of filters
+                    for (int j = 0; j < kernel.getData().size(); j ++){
+                        unit_res.getData()[j] = this->Qdata[i].convd(kernel.getData()[j], stride, padding);
                     }//end for
-                    res[i] = unit_res;
+                    res.getData().push_back(unit_res);
                 }
                 return res;
             }
@@ -525,9 +537,9 @@ namespace MultiEigen{
                 res.setData(this->Qdata);
                 //loop thourght all image and do activation
                 for (int i = 0; i < this->Qdata.size(); i ++){
-                    Eigen_3D<T> &t_3d = this->Qdata[i];
+                    Eigen_3D<T> &t_3d = res.getData()[i];
                     for (int j = 0; j < t_3d.getData().size(); j ++){
-                        t_3d.getData()[j].AddBoradCast(other);
+                        t_3d.getData()[j].AddBoradCast(other, j);
                     }
                 }
                 return res;

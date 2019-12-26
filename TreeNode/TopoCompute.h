@@ -59,10 +59,14 @@ namespace TopoENV{
                     string op = node["OPERATION"].asCString();
 				    int dimension = 1; // default dimension is 1
 				    std::vector<int> shape;
+                    std::vector<int> stride;
 				    if (!node["SHAPE"].isNull()){
 					    ProcessBracket(node["SHAPE"].asCString(), shape);
 					    dimension = shape.size();
 				    }
+                    if (!node["STRIDE"].isNull()){
+                        ProcessBracket(node["STRIDE"].asCString(), stride);
+                    }
                     TensorData<T> temp_data(tyname::D_0);
                     if (dimension == 2){
                         if (shape[1] == 1){
@@ -80,8 +84,6 @@ namespace TopoENV{
                         if (!node["TENSOR_VALUE"].isNull()){s_data.setData(shape[0], shape[1], shape[2], node["TENSOR_VALUE"]);}
                     }else if (dimension == 4){
                         temp_data.setType(tyname::D_4);
-                        // cout << (temp_data.getType() == tyname::D_4) << endl;
-                        //cout << temp_data.getType() << endl;
                         Eigen_4D<T>& s_data = temp_data.E4D;
                         if (op == "Identity"){
                             //which means this is kernel matrix
@@ -94,10 +96,23 @@ namespace TopoENV{
 				    }//end for
 				    string type = node["TYPE"].asCString();
                     string father_name = node["FATHER"].isNull()? "None" : node["FATHER"].asCString();
-				    MULTINode<T> newnode(temp_data, father_name, shape, *iter, op, INPUT, INPUT.size());
+                    MultiEigen::padding_type pad_type;
+                    if (node["PADIING"].isNull()){
+                        pad_type = MultiEigen::padding_type::same;
+                    }else{
+                        string pad_value = node["PADIING"].asCString();
+                        if (pad_value == "SAME"){
+                            pad_type = MultiEigen::padding_type::same;
+                        }else{
+                            pad_type = MultiEigen::padding_type::valid;
+                        }
+                    }
+                    //MultiEigen::padding_type pad_type = node["PADIING"].isNull()? MultiEigen::padding_type::same : (node["PADIING"].asCString() == "SAME"? MultiEigen::padding_type::same : MultiEigen::padding_type::valid);
+                    MULTINode<T> newnode(temp_data, father_name, shape, stride, *iter, op, INPUT, INPUT.size(), pad_type);
 				    root.reset(newnode);
                     //store the address of this object
 				    map_s_n.insert(make_pair(*iter, newnode));
+                    cout << *iter << endl;
 			    }
 		    }//end for
 	    }
@@ -107,7 +122,6 @@ namespace TopoENV{
     template<typename T>
 	void ComputeAll(map<string, MULTINode<T>> &indgree, MULTINode<T> &tnode){
         std::map<string, int> namemap;
-        std::map<int, tyname> int_name;
         namemap.insert(make_pair("Add", 1));
         namemap.insert(make_pair("MatMul", 2));
         namemap.insert(make_pair("Softmax", 3));
@@ -115,16 +129,12 @@ namespace TopoENV{
         namemap.insert(make_pair("Sigmoid", 5));
         namemap.insert(make_pair("Relu", 6));
         namemap.insert(make_pair("Conv2D",7));
-        int_name.insert(make_pair(1, tyname::D_1));
-        int_name.insert(make_pair(2, tyname::D_2));
-        int_name.insert(make_pair(3, tyname::D_3));
-        int_name.insert(make_pair(4, tyname::D_4));
         TensorData<T> input_1;
         TensorData<T> input_2;
         TensorData<T> output;
         std::vector<int> new_shape;
         Eigen_Vector<T> final_res;
-        cout << tnode.op << " ";
+        cout << tnode.name << " ";
         tyname type_name;
         switch(namemap[tnode.op]){
             case 1:
@@ -132,6 +142,11 @@ namespace TopoENV{
                 input_1 = indgree[tnode.children[0]].data;
                 input_2 = indgree[tnode.children[1]].data;
                 type_name = input_1.getType();
+                // printf("%d\n", type_name);
+                // cout << "ABCDEFG" << endl;
+                // cout << (type_name == tyname::D_2) << endl;
+                // cout << (type_name == tyname::D_4) << endl;
+                // cout << "ABCDEFG" << endl;
                 if (type_name == tyname::D_2){
                     //D_2
                     if (input_1.E2D.get_col_length() == input_2.E2D.get_col_length() || input_1.E2D.get_row_length() == input_2.E2D.get_row_length()){
@@ -139,14 +154,21 @@ namespace TopoENV{
                     }else{
                         output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
                     }
+                    output.setType(tyname::D_2);
                     new_shape.push_back(output.E2D.get_row_length());
                     new_shape.push_back(output.E2D.get_col_length());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
                     //D_4
+                    // cout << "The brightest star in the sky" << endl;
+                    // cout << input_1.E4D.getData().size() << endl;
+                    // cout << input_1.E4D.getData()[0].getData().size() << endl;
+                    // cout << input_1.E4D.getData()[0].getData()[0].getData().rows() << endl;
+                    // cout << input_1.E4D.getData()[0].getData()[0].getData().cols() << endl;
                     output.setData(input_1.E4D.AddBoradCast(input_2.E1D));
-                    output.getShape(&new_shape);
+                    output.E4D.getShape(new_shape);
+                    output.setType(tyname::D_4);
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
@@ -159,6 +181,7 @@ namespace TopoENV{
                 input_2 = indgree[tnode.children[1]].data;
                 cout << input_2.E2D.get_col_length() << "=====" << input_2.E2D.get_row_length() << endl;
                 output.setData(input_1.E2D.Matmul(input_2.E2D));
+                output.setType(tyname::D_2);
                 new_shape.push_back(output.E2D.get_row_length());
                 new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
@@ -169,6 +192,7 @@ namespace TopoENV{
                 cout << "3" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 output.setData(input_1.E2D.softmax2d(true));
+                output.setType(tyname::D_2);
                 new_shape.push_back(output.E2D.get_row_length());
                 new_shape.push_back(output.E2D.get_col_length());
                 tnode.setData(output);
@@ -179,18 +203,12 @@ namespace TopoENV{
                 cout << "3 finished" << endl;
                 break;
             case 4:
-                /*
-                [a, b, c, d]
-                -a: Number of pictures 
-                -b: x dimension
-                -c: y dimension
-                -d: Number of channels
-                */
                 cout << "4" << endl;
                 input_1 = indgree[tnode.children[0]].data;
                 output.setData(input_1.E4D.reshape());
                 new_shape.push_back(output.E2D.get_row_length());
                 new_shape.push_back(output.E2D.get_col_length());
+                output.setType(tyname::D_2);
                 tnode.setData(output);
                 tnode.setShape(new_shape);
                 cout << "4 finished" << endl;
@@ -201,13 +219,15 @@ namespace TopoENV{
                 type_name = input_1.getType();
                 if (type_name == tyname::D_2){
                     output.setData(input_1.E2D.apply(MATHLIB::sigmoid<T>));
+                    output.setType(tyname::D_2);
                     new_shape.push_back(output.E2D.get_row_length());
                     new_shape.push_back(output.E2D.get_col_length());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
                     output.setData(input_1.E4D.apply(MATHLIB::sigmoid<T>));
-                    output.getShape(&new_shape);
+                    output.E4D.getShape(new_shape);
+                    output.setType(tyname::D_4);
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
@@ -219,17 +239,29 @@ namespace TopoENV{
                 type_name = input_1.getType();
                 if (type_name == tyname::D_2){
                     output.setData(input_1.E2D.apply(MATHLIB::relu<T>));
+                    output.setType(tyname::D_2);
                     new_shape.push_back(output.E2D.get_row_length());
                     new_shape.push_back(output.E2D.get_col_length());
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }else{
                     output.setData(input_1.E4D.apply(MATHLIB::relu<T>));
-                    output.getShape(&new_shape);
+                    output.setType(tyname::D_4);
+                    output.E4D.getShape(new_shape);
                     tnode.setData(output);
                     tnode.setShape(new_shape);
                 }
                 cout << "6 finished" << endl;
+                break;
+            case 7:
+                cout << "7" << endl;
+                input_1 = indgree[tnode.children[0]].data; //image
+                input_2 = indgree[tnode.children[1]].data; //kernel
+                output.setData(input_1.E4D.convd_with_multi_filter(input_2.E4D, tnode.stride, tnode.pad_type));
+                cout << "(" << output.E4D.getData().size() << "," << output.E4D.getData()[0].getData()[0].getData().rows() << "," << output.E4D.getData()[0].getData()[0].getData().cols() << "," << output.E4D.getData()[0].getData().size() << ")"<<endl;
+                output.setType(tyname::D_4);
+                tnode.setData(output);
+                cout << "7 finished" << endl;
                 break;
             default:
                 cout << "Invalid Operation!!!" << endl;
@@ -260,14 +292,16 @@ namespace TopoENV{
                     }
                  }
                  string op_name = tnode.op;
-                 cout << "ABC " << op_name << " CBA" << endl;
-                //  if (op_name == "Placeholder"){
-                //      tnode.setData(input);
-                //  }else if(op_name == "Identity"){
-                //     // cout << tnode.data.getData() << endl;
-                //  }else{
-                //      ComputeAll<T>(indgree, tnode);
-                //  }
+                 if (op_name == "Placeholder"){
+                     tnode.setData(input);
+                 }else if(op_name == "Identity"){
+                    // cout << tnode.data.getData() << endl;
+                 }else if (op_name == "Const"){
+                    // No need to operate
+                 }
+                 else{
+                     ComputeAll<T>(indgree, tnode);
+                 }
                  size_of_q --;
              }
         }//end for outer while

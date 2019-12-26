@@ -12,6 +12,11 @@ namespace MATHLIB{
     T relu(T x){
         return x < T(0.0) ? T(0.0) : x;
     }
+
+    template<typename T>
+    T broadcastAdd(T x, T y){
+        return x + y;
+    }
 }
 
 #endif
