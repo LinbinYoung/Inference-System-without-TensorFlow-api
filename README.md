@@ -50,13 +50,13 @@ Please ensure that the following library is correct installed before implement t
  The most complicated operation is **tf.conv2d**. We need to deal with the case with **padding_type::same** and **strides**.
 
 
-<i class="icon-question"></i> **Q1:** What is the dimension of convd result?
+<i class="icon-question"></i> **Q1:** What is the dimension of convd result?<br>
 <i class="icon-pencil"></i> dimension = ((input – filter) / stride) + 1
 
-<i class="icon-question"></i> **Q2:** How to deal with the case when padding is padding_type::same?
-<i class="icon-pencil"></i> needed_padding = (((input/stride))-1) * (stride) + filter - input
-<i class="icon-pencil"></i> left_padding = needed_padding /2
-<i class="icon-pencil"></i> right_padding = needed_ padding - left_padding
+<i class="icon-question"></i> **Q2:** How to deal with the case when padding is padding_type::same?<br>
+<i class="icon-pencil"></i> needed_padding = (((input/stride))-1) * (stride) + filter - input<br>
+<i class="icon-pencil"></i> left_padding = needed_padding /2<br>
+<i class="icon-pencil"></i> right_padding = needed_ padding - left_padding<br>
 
 ### 4. Test on Mnist Dataset[^data]
 
