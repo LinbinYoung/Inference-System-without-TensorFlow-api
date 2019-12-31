@@ -1,7 +1,5 @@
 # ![cmd-markdown-logo](./doc/2.png)
 
-------
-
 This is an inference tool for TensorFlow model. 
 
 > * Test Deep Learning Models are from [TensorFlow Tutorial](https://github.com/GoogleCloudPlatform/tensorflow-without-a-phd/tree/master/tensorflow-mnist-tutorial).
