@@ -18,13 +18,13 @@ The compute graph is a DAG, so we can use **Multi-way Tree[^Tree]** to store the
 
 This project is compiled on both **macOS** and **Linux16.04**. You can install the project in **CLion** or directly run the project in Linux Shell.
 
-Please ensure that the following library is correct installed before implement this project:
+Please ensure that the following library is correctly installed before implementing this project:
 
 * GCC 5.4.0
 * JsonCPP 
 * Eigen 3.3.7
 
-**Note:** The newest version of JsonCPP should compiled with CMAKE. Be sure to set the right path of libs and library in CMAKELists and Makefile.
+**Note:** The newest version of JsonCPP should be compiled with CMAKE. Be sure to set the right path of libs and library in CMAKELists and Makefile.
 
 ### 3. Define the operation
 ![intro](./doc/1.png)
