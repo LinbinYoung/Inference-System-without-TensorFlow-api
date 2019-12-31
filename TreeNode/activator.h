@@ -1,5 +1,9 @@
-#ifndef ACTIVATOR_H
-#define ACTIVATOR_H
+//
+// Created by Linbin Yang on 2019-12-28.
+//
+
+#ifndef C_INFERENCE_ACTIVATOR_H
+#define C_INFERENCE_ACTIVATOR_H
 #include <cmath>
 
 namespace MATHLIB{

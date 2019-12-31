@@ -1,13 +1,19 @@
-#ifndef TOPOCOMPUTE_H
-#define TOPOCOMPUTE_H
+//
+// Created by Linbin Yang on 2019-12-28.
+//
+
+#ifndef C_INFERENCE_TOPOCOMPUTE_H
+#define C_INFERENCE_TOPOCOMPUTE_H
 #include <fstream>
 #include <map>
-#include <commonlib.h>
+#include <common/commonlib.h>
 #include <TreeNode/activator.h>
-#include <Node.h>
+#include <TreeNode/Node.h>
+#include <LoadBatch/loaddata.h>
 #include <cstdarg>
 
 using namespace MATHLIB;
+using namespace DataLoader;
 
 namespace TopoENV{
     void ProcessBracket(string shape_str, std::vector<int> &shape_v){
@@ -273,7 +279,7 @@ namespace TopoENV{
     }
 
     template<typename T>
-    void TopoComputeEngine(map<string, MULTINode<T>> indgree, TensorData<T> const input){
+    void TopoComputeEngine(map<string, MULTINode<T>> indgree, TensorData<T> input){
         std::deque<string> q;
         //initialzied the queue with node of which the indegree in 0
         for (auto iter = indgree.begin(); iter != indgree.end(); iter ++){
@@ -281,7 +287,7 @@ namespace TopoENV{
                 //store the value of iter
                 q.push_back(iter->first);
             }
-        }//end for
+        }
         while(q.size() > 0){
              int size_of_q = q.size();
              while (size_of_q > 0){

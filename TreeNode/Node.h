@@ -1,6 +1,10 @@
-#ifndef NODE_H
-#define NODE_H
-#include <commonlib.h>
+//
+// Created by Linbin Yang on 2019-12-28.
+//
+
+#ifndef C_INFERENCE_NODE_H
+#define C_INFERENCE_NODE_H
+#include <common/commonlib.h>
 #include <vector>
 #include <string>
 #include <algorithm>
