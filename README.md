@@ -28,7 +28,7 @@ Please ensure that the following library is correctly installed before implement
 
 ### 3. Define the operation
 ![intro](./doc/1.png)
- **Eigen** can only do calculation on 2D matrix. So I write wrapper on the Eigen Matrix to genralize datatype to 3D and 4D. The value is stored in row major. 
+ **Eigen** can only do calculation on 2D matrix. So I wrote wrapper on the Eigen Matrix to generalize datatype to 3D and 4D. The value is stored in row major. 
 
  - Eigen_3D\<T> m(a, b, c);
    * a: Number of channels
