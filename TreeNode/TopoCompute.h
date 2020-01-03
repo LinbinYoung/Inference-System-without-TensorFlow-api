@@ -154,7 +154,7 @@ namespace TopoENV{
                         cout << "   input_2: " <<"(" << input_2.E2D.rows() << "," << input_2.E2D.cols() << ")" << endl;
                         output.setData(input_1.E2D.AddWithoutBroadCast(input_2.E2D));
                     }else{
-                        cout << "   input_2: " <<"(" << input_2.E1D.Sinsize() << ")" << endl;
+                        cout << "   input_2: " <<"(" << input_2.E1D.size() << ")" << endl;
                         output.setData(input_1.E2D.AddBoradCast(input_2.E1D));
                     }
                     output.setType(tyname::D_2);
@@ -166,7 +166,7 @@ namespace TopoENV{
                 }else{
                     //D_4
                     cout << "   input_1: " <<"(" << input_1.E4D.Qsize() << "," << input_1.E4D[0][0].rows() << "," << input_1.E4D[0][0].cols() << "," << input_1.E4D[0].Tsize() << ")"<<endl;
-                    cout << "   input_2: " <<"(" << input_2.E1D.Sinsize() << ")" << endl;
+                    cout << "   input_2: " <<"(" << input_2.E1D.size() << ")" << endl;
                     output.setData(input_1.E4D.AddBoradCast(input_2.E1D));
                     output.E4D.getShape(new_shape);
                     output.setType(tyname::D_4);
@@ -200,7 +200,7 @@ namespace TopoENV{
                 tnode.setShape(new_shape);
                 final_res = output.E2D.Argmax(true);
                 cout << "   Final Result:" << endl << "   ";
-                final_res.Printout();
+                cout << final_res << endl;
                 cout << "   finished" << endl;
                 break;
             case 4:

@@ -30,7 +30,7 @@ namespace MultiEigen{
         void setData(Eigen::Matrix<T, Eigen::Dynamic, 1> current){
             this->data = current;
         }
-        int Sinsize(){
+        int size(){
             return this->data.size();
         }
         void setData(int m, Json::Value node){
@@ -38,12 +38,6 @@ namespace MultiEigen{
             for (int i = 0; i < m; i ++){
                 this->data(i) = (T)node[i].asDouble();
             }
-        }
-        void Printout(){
-            for (int i = 0; i < this->data.size(); i ++){
-                cout << this->data[i] << " ";
-            }
-            cout << endl;
         }
         //auto inline
         inline T &operator[](int i){
@@ -55,8 +49,15 @@ namespace MultiEigen{
         Eigen::Matrix<T, Eigen::Dynamic, 1> data;
     };
     template <typename T>
-    std::ostream& operator<<(std::ostream &os, const Eigen_Vector<T> &m){
-        os << "[" << m.data << "]";
+    std::ostream& operator<<(std::ostream &os,  Eigen_Vector<T> &m){
+        os << "[";
+        for(int i = 0; i < m.size(); i ++){
+            os << m[i];
+            if (i != m.size() - 1){
+                os << " ";
+            }
+        }
+        os << "]";
         return os;
     }
 
@@ -164,8 +165,8 @@ namespace MultiEigen{
         same
     };
 
-#define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
-#define NEEDED_DIMENSION(input, filter, stride) ((((input/stride))-1) * (stride) + filter - input)
+    #define FILTER_DIM(input, filter, stride) (((input) - (filter))/(stride) + 1)
+    #define NEEDED_DIMENSION(input, filter, stride) ((((input/stride))-1) * (stride) + filter - input)
     template <typename T>
     struct Eigen_2D{
     public:
@@ -324,9 +325,7 @@ namespace MultiEigen{
         Eigen_2D<T> apply(const std::function<T(const T&)> &f){
             Eigen_2D<T> res;
             res.setData(this->data);
-            // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
             for (auto iter = res.begin(); iter != res.end(); iter++){
-                //std::transform(iter.begin(), iter.end(), iter.begin(), f);
                 for (auto elem = iter.begin(); elem != iter.end(); elem ++){
                     *elem = f(*elem);
                 }
@@ -567,7 +566,7 @@ namespace MultiEigen{
             res.push_back(this->Qdata.size());
             res.push_back(this->Qdata[0].rows());
             res.push_back(this->Qdata[0].cols());
-            res.push_back(this->Qdata[0].getData().size());
+            res.push_back(this->Qdata[0].Tsize());
         }
         std::vector<Eigen_3D<T>>& getData(){
             return this->Qdata;
@@ -600,8 +599,8 @@ namespace MultiEigen{
         Eigen_4D<T> apply(const std::function<T(const T&)> &f){
             Eigen_4D<T> res;
             res.setData(this->Qdata);
-            //Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
-            //loop thourght all image and do activation
+            // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& f_data = res.getData();
+            // Loop thourght all image and do activation
             for (int i = 0; i < res.Qsize(); i ++){
                 for (int j = 0; j < res[i].Tsize(); j ++){
                     res[i][j] = res[i][j].apply(f);

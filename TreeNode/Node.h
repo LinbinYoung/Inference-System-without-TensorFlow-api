@@ -58,9 +58,6 @@ namespace TopoENV{
             void setData(TensorData<T> const &new_data){
                 this->data = new_data;
             }
-            std::string getName(){
-                return this->father;
-            }
             std::vector<int>& getShape(){
                 return this->shape;
             }
